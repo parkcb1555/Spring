@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TravelDateTimeSetting</title>
+</head>
+<body>
+<form id="date-range-form" action="/TravelTagSetView" method="post">
+    <label for="start-date">시작 날짜:</label>
+    <input type="date" id="start-date" name="start-date" th:value="${person.startdate}"/> <!-- name 속성 일치 확인 -->
+
+    <label for="end-date">종료 날짜:</label>
+    <input type="date" id="end-date" name="end-date" th:value="${person.enddate}"/> <!-- name 속성 일치 확인 -->
+    <!-- 시간 필드들이 추가될 컨테이너 -->
+    <div id="time-fields-container"></div>
+    <button type="submit">날짜 전송</button>
+</form>
+
+
+<script>
+    window.onload = function() {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            const container = document.getElementById('time-fields-container');
+            container.innerHTML = ""; // 기존의 필드를 초기화
+
+            while (start <= end) {
+                const dateString = start.toISOString().split('T')[0];
+
+                const dateDiv = document.createElement('div');
+                dateDiv.innerHTML = `
+                        <label for="appt-starttime-${dateString}">시작시간 (${dateString}): </label>
+                        <input id="appt-starttime-${dateString}" type="time" name="appt-start-${dateString}" value="09:00" />
+
+                        <label for="appt-endtime-${dateString}">마칠시간 (${dateString}): </label>
+                        <input id="appt-endtime-${dateString}" type="time" name="appt-end-${dateString}" value="17:00" />
+                        <br><br>
+                    `;
+                container.appendChild(dateDiv);
+
+                start.setDate(start.getDate() + 1); // 날짜 증가
+            }
+        } else {
+            alert("시작일과 종료일을 모두 선택해 주세요.");
+        }
+    };
+</script>
+</body>
+</html>
