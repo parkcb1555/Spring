@@ -203,7 +203,7 @@ public class foursquareRequest {
                 priceTier = place.get("price").getAsString();
             }else{
                 priceTier = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"priceTier");
-
+                System.out.println(priceTier);
                 place.addProperty("price", Integer.parseInt(priceTier));
             }
 

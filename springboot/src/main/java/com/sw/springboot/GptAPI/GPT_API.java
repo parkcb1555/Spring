@@ -28,6 +28,7 @@ public class GPT_API {
 
     //장소 주소,운영시간,가격티어 구하기
     public String Gpt_Request(String apikey,String latitude,String longitude,String name, String types) {
+        System.out.println(apikey);
 
         String text = "";
         try {
@@ -63,7 +64,7 @@ public class GPT_API {
 
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Authorization", "Bearer " + apikey);
+            connection.setRequestProperty("Authorization", "Bearer " + apikey); // apikey 확인
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setDoOutput(true);
 
@@ -80,6 +81,8 @@ public class GPT_API {
                 }
             }
 
+
+            System.out.println(response.toString());
 
             text = parseAndPrintResponse(apikey,response.toString(),types);
         } catch (Exception e) {
