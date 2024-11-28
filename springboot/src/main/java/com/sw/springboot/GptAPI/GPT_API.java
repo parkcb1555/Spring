@@ -1,9 +1,14 @@
 package com.sw.springboot.GptAPI;
 
 
+import lombok.Getter;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -13,8 +18,8 @@ import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Component
 public class GPT_API {
-    private static final String API_KEY = "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";
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
     private static final int BUFFER_SIZE = 4096;
     private static final int MAX_TOKENS = 500; // 최대 토큰 수 설정
@@ -22,7 +27,8 @@ public class GPT_API {
 
 
     //장소 주소,운영시간,가격티어 구하기
-    public String Gpt_Request(String latitude,String longitude,String name, String types) {
+    public String Gpt_Request(String apikey,String latitude,String longitude,String name, String types) {
+
         String text = "";
         try {
             String prompt = "";
@@ -57,7 +63,7 @@ public class GPT_API {
 
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
+            connection.setRequestProperty("Authorization", "Bearer " + apikey);
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setDoOutput(true);
 
@@ -75,14 +81,14 @@ public class GPT_API {
             }
 
 
-            text = parseAndPrintResponse(response.toString(),types);
+            text = parseAndPrintResponse(apikey,response.toString(),types);
         } catch (Exception e) {
             System.err.println("API 호출 중 오류 발생: " + e.getMessage());
         }
         return text;
     }
 
-    private static String parseAndPrintResponse(String responseBody, String types) throws JSONException {
+    private static String parseAndPrintResponse(String apikey,String responseBody, String types) throws JSONException {
         JSONObject jsonObject = new JSONObject(responseBody);
         JSONArray choices = jsonObject.getJSONArray("choices");
         String extracttext = "";
@@ -100,12 +106,12 @@ public class GPT_API {
 
             // Check for continuation token and fetch next response if available
             if (jsonObject.has("next")) {
-                fetchNextResponse(jsonObject.getString("next"),types);
+                fetchNextResponse(apikey,jsonObject.getString("next"),types);
             }
         }
         return extracttext;
     }
-    private static void fetchNextResponse(String nextToken,String types) {
+    private static void fetchNextResponse(String apikey,String nextToken,String types) {
         // Implementation for fetching next response using the continuation token
         try {
             // API URL 설정
@@ -118,7 +124,7 @@ public class GPT_API {
             // HTTP 연결 설정
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
+            connection.setRequestProperty("Authorization", "Bearer " + apikey);
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setDoOutput(true);
 
@@ -138,7 +144,7 @@ public class GPT_API {
             }
 
             // 응답 파싱 및 출력
-            parseAndPrintResponse(response.toString(),types);
+            parseAndPrintResponse(apikey,response.toString(),types);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -184,11 +190,11 @@ public class GPT_API {
     }
 
     // 평균 관람 시간 받아옴
-    public static int AverageTime(String latitude,String longitude,String place){
+    public static int AverageTime(String apikey,String latitude,String longitude,String place){
         ////========================GPT API function 호출=================================================
         String url = "https://api.openai.com/v1/chat/completions";
 //		String place = "경복궁";
-        String authorizationKey = "Bearer "+API_KEY; // 여기에 자신의 API 키 입력
+        String authorizationKey = "Bearer "+apikey; // 여기에 자신의 API 키 입력
         int averageVisitTime = 0;
         String jsonInputString = "{"
                 + "\"model\": \"gpt-4o-mini\","
@@ -300,10 +306,10 @@ public class GPT_API {
     }
 
     // 관광지 추천 이유 받아옴
-    public static String PlaceChooseReason(String latitude,String longitude,String place){
+    public static String PlaceChooseReason(String apikey,String latitude,String longitude,String place){
         ////========================GPT API function 호출=================================================
         String url = "https://api.openai.com/v1/chat/completions";
-        String authorizationKey = "Bearer "+API_KEY; // 여기에 자신의 API 키 입력
+        String authorizationKey = "Bearer "+apikey; // 여기에 자신의 API 키 입력
         String jsonInputString = "{"
                 + "\"model\": \"gpt-4o-mini\","
                 + "\"messages\": ["

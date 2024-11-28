@@ -2,6 +2,7 @@ package com.sw.springboot.GooGlePlaceAPI;
 
 import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.TravelMode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,7 @@ import java.util.*;
 public class DirectionsController {
     private final DirectionsService directionsService;
 
+    @Autowired
     public DirectionsController(DirectionsService directionsService) {
         this.directionsService = directionsService;
     }

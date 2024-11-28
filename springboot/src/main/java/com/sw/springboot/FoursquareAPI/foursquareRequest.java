@@ -19,6 +19,8 @@ import java.util.*;
 
 
 import com.sw.springboot.GptAPI.*;
+import com.sw.springboot.GptAPI.GPT_API;
+import com.sw.springboot.GptAPI.GPT_API_Compent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,10 +30,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class foursquareRequest {
 
     @GetMapping("/foursquare")
-    public JsonArray req(String FoursquareApiKey,String tag) throws IOException {
+    public JsonArray req(String FoursquareApiKey,String gptapikey,String tag) throws IOException {
         OkHttpClient client = new OkHttpClient();
 
         System.out.println(tag);
+
+
+        GPT_API gpt_api = new GPT_API();
 
         double originLat=0.0;
         double originLng=0.0;
@@ -101,7 +106,6 @@ public class foursquareRequest {
         }
 
         // 정렬된 결과 출력
-        GPT_API gpt_api = new GPT_API();
         for (int i = 0; i < sortedResultsArray.size(); i++) {
 
 //            System.out.println((i+1)+"번째");
@@ -124,7 +128,7 @@ public class foursquareRequest {
             if (location.has("address")) {
                 address = location.get("address").getAsString();
             }else{
-                address = gpt_api.Gpt_Request(latitude,longitude,name,"address");
+                address = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"address");
                 location.addProperty("address",address);
             }
 
@@ -172,7 +176,7 @@ public class foursquareRequest {
                 }else{
                     ObjectMapper objectMapper = new ObjectMapper();
 
-                    String string_rh = gpt_api.Gpt_Request(latitude,longitude,name,"regularHours");
+                    String string_rh = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"regularHours");
                     String string_rh_GPT = regularHours_GPT(string_rh);
 
                     regularHours = string_rh_GPT;
@@ -198,7 +202,7 @@ public class foursquareRequest {
             if(place.has("price")){
                 priceTier = place.get("price").getAsString();
             }else{
-                priceTier = gpt_api.Gpt_Request(latitude,longitude,name,"priceTier");
+                priceTier = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"priceTier");
 
                 place.addProperty("price", Integer.parseInt(priceTier));
             }
@@ -253,10 +257,10 @@ public class foursquareRequest {
             }
 
             //평균 관람 시간 구하기
-            int AverageTime = GPT_API.AverageTime(latitude,longitude,name); //평균 관람 시간 구하기
+            int AverageTime = GPT_API.AverageTime(gptapikey,latitude,longitude,name); //평균 관람 시간 구하기
             place.addProperty("RegularTime",AverageTime);
 
-            String PlaceDescription = GPT_API.PlaceChooseReason(latitude,longitude,name);
+            String PlaceDescription = GPT_API.PlaceChooseReason(gptapikey,latitude,longitude,name);
             place.addProperty("PlaceDescription",PlaceDescription);
 
             FoursquarePhoto foursquarePhoto = new FoursquarePhoto();
@@ -271,9 +275,9 @@ public class foursquareRequest {
     }
 
     @GetMapping("/RestaurantReq")
-    public JsonArray RestaurantReq(String FoursquareApiKey,String Lat,String Lng) throws IOException {
+    public JsonArray RestaurantReq(String FoursquareApiKey,String gptapikey,String Lat,String Lng) throws IOException {
         OkHttpClient client = new OkHttpClient();
-
+        GPT_API gpt_api = new GPT_API();
         // Foursquare Place Search API 요청 (인기도 순 정렬 및 카테고리 ID 포함)
         Request request = new Request.Builder()
                 .url("https://api.foursquare.com/v3/places/search?ll="+Lat+","+Lng+"&radius=1000&categories=13065&sort=RATING&limit=5&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
@@ -337,7 +341,6 @@ public class foursquareRequest {
         }
 
         // 정렬된 결과 출력
-        GPT_API gpt_api = new GPT_API();
         for (int i = 0; i < sortedResultsArray.size(); i++) {
 
 //            System.out.println((i+1)+"번째");
@@ -360,7 +363,7 @@ public class foursquareRequest {
             if (location.has("address")) {
                 address = location.get("address").getAsString();
             }else{
-                address = gpt_api.Gpt_Request(latitude,longitude,name,"address");
+                address = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"address");
                 location.addProperty("address",address);
             }
 
@@ -383,7 +386,7 @@ public class foursquareRequest {
                 }else{
                     ObjectMapper objectMapper = new ObjectMapper();
 
-                    String string_rh = gpt_api.Gpt_Request(latitude,longitude,name,"regularHours");
+                    String string_rh = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"regularHours");
                     String string_rh_GPT = regularHours_GPT(string_rh);
 
                     regularHours = string_rh_GPT;
@@ -410,7 +413,7 @@ public class foursquareRequest {
             if(place.has("price")){
                 priceTier = place.get("price").getAsString();
             }else{
-                priceTier = gpt_api.Gpt_Request(latitude,longitude,name,"priceTier");
+                priceTier = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"priceTier");
 
                 place.addProperty("price", Integer.parseInt(priceTier));
             }
@@ -469,7 +472,7 @@ public class foursquareRequest {
             int RegularTime = 60;
             place.addProperty("RegularTime",RegularTime);
 
-            String PlaceDescription = GPT_API.PlaceChooseReason(latitude,longitude,name);
+            String PlaceDescription = GPT_API.PlaceChooseReason(gptapikey,latitude,longitude,name);
             place.addProperty("PlaceDescription",PlaceDescription);
 
             FoursquarePhoto foursquarePhoto = new FoursquarePhoto();

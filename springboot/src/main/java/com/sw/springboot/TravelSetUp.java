@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.maps.model.*;
-import com.sw.springboot.WeatherAPI.weather;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,12 +27,23 @@ import java.time.temporal.ChronoUnit;
 
 import com.sw.springboot.ChooseTravelSpot.*;
 import com.sw.springboot.GooGlePlaceAPI.*;
+import com.sw.springboot.WeatherAPI.weather;
+import com.sw.springboot.WeatherAPI.WeatherService;
 
 
 @Controller
 public class TravelSetUp {
     @Autowired
     RecommendationScore recommendationScore;
+
+    @Autowired
+    GGP_Service ggp_service;
+
+    @Autowired
+    DirectionsService directionsService;
+
+    @Autowired
+    WeatherService weatherService;
 
     public String VilageWeatherSet(LocalDate nowdate,Map<LocalDate, Double> VilageWeatherData){
         String weatherDescription = "";
@@ -45,17 +56,17 @@ public class TravelSetUp {
             }
 
             if(date.equals(nowdate)) {
-                if (value >= 0.0 && value <= 5.0) {
+                if (value >= 0.0 && value < 3.0) {
                     weatherDescription = "맑음";
                     weatherCheck = true;
                     System.out.println("value : "+value+">>"+date+"에는 날씨가 "+weatherDescription+" 입니다.");
                     break;
-                } else if (value >= 6.0 && value <= 8.0) {
+                } else if (value >= 3.0 && value < 4.0) {
                     weatherDescription = "구름많음";
                     weatherCheck = true;
                     System.out.println("value : "+value+">>"+date+"에는 날씨가 "+weatherDescription+" 입니다.");
                     break;
-                } else if (value >= 9.0 && value <= 10.0) {
+                } else if (value >= 4.0) {
                     weatherDescription = "흐림";
                     weatherCheck = true;
                     System.out.println("value : "+value+">>"+date+"에는 날씨가 "+weatherDescription+" 입니다.");
@@ -194,6 +205,7 @@ public class TravelSetUp {
         String city = parameters.get("city");
         String startdate = parameters.get("startdate");
         String enddate = parameters.get("enddate");
+
         String peoplecount = parameters.get("peoplecount");
 
 
@@ -211,6 +223,8 @@ public class TravelSetUp {
             // request에서 starttime, endtime 받아오기
             String startTime = request.getParameter("starttime_" + dateString);
             String endTime = request.getParameter("endtime_" + dateString);
+
+            System.out.println("start="+start+" startTime="+startTime+" endTime="+endTime);
 
             // 날짜와 시작, 종료 시간을 배열로 저장
             dateTimeMap.put(dateString, new String[] { startTime, endTime });
@@ -230,12 +244,13 @@ public class TravelSetUp {
         weather weather = new weather();
         Map<LocalDate, Double> VilageWeatherData = Map.of();
         String MidWeather="";
+
+        //기상청 api 단기예보 호출
+        VilageWeatherData = weather.VilageFcstInfoService(weatherService.getWeatherApiKey(),LocalDate.parse(startdate),LocalDate.parse(enddate));
+
         if(LocalDate.parse(enddate).isAfter(LocalDate.now().plusDays(2))) {
             //기상청 api 중기예보 호출
-            MidWeather = weather.MidFcstInfoService(start,end);
-        }else{
-            //기상청 api 단기예보 호출
-            VilageWeatherData = weather.VilageFcstInfoService(LocalDate.parse(startdate),LocalDate.parse(enddate));
+            MidWeather = weather.MidFcstInfoService(weatherService.getWeatherApiKey(),start,end);
         }
 
         Map<LocalDateTime, JsonArray> result = recommendationScore.ChooseTravelSpot(tags,startdate,enddate,dateTimeMap);
@@ -270,7 +285,6 @@ public class TravelSetUp {
         Centerlongitude = Centerlongitude/spotcount;
 
         // 호텔 호출
-        GGP_Service ggp_service = new GGP_Service("AIzaSyBpYHuPzcz63P3hz-xSUNm75qIYmMur9sc");
         GGP_Controller ggp_controller = new GGP_Controller(ggp_service);
         PlacesSearchResponse PlacesSearchresponse =ggp_controller.getNearbyPlaces(Centerlatitude,Centerlongitude,"LODGING");
 
@@ -335,7 +349,6 @@ public class TravelSetUp {
                     PlacesSearchResult firstPlace = PlacesSearchresponse.results[0];
 
                     //길찾기-호텔 호출
-                    DirectionsService directionsService = new DirectionsService("AIzaSyBpYHuPzcz63P3hz-xSUNm75qIYmMur9sc");
                     DirectionsResult route = directionsService.getDirections(currentLat, currentLng, firstPlace.geometry.location.lat, firstPlace.geometry.location.lng);
 
                     PlaceDetails placeDetails = ggp_controller.searchPlacesDetail(firstPlace.placeId);
@@ -343,7 +356,7 @@ public class TravelSetUp {
                     String photoUrl = "https://maps.googleapis.com/maps/api/place/photo"
                             + "?maxwidth=400"
                             + "&photo_reference=" + placeDetails.photos[0].photoReference
-                            + "&key=AIzaSyBpYHuPzcz63P3hz-xSUNm75qIYmMur9sc";
+                            + "&key="+ggp_service.printApiKey();
 
                     // 총 이동 시간을 담을 변수 (초 단위로 저장)
                     long totalDurationInSeconds = 0;
@@ -388,8 +401,6 @@ public class TravelSetUp {
                     nextLng = nextSpot.get("longitude").getAsDouble();
                     RegularTime = Long.parseLong(spot.get("RegularTime").getAsString());
 
-                    // 길찾기 호출
-                    DirectionsService directionsService = new DirectionsService("AIzaSyBpYHuPzcz63P3hz-xSUNm75qIYmMur9sc");
 
                     // 총 이동 시간을 담을 변수 (초 단위로 저장)
                     long totalDurationInSeconds = 0;
@@ -600,7 +611,6 @@ public class TravelSetUp {
                     spotDetails.add(spotInfo);
                     
                     //길찾기-호텔 호출
-                    DirectionsService directionsService = new DirectionsService("AIzaSyBpYHuPzcz63P3hz-xSUNm75qIYmMur9sc");
                     DirectionsResult route = directionsService.getDirections(currentLat, currentLng, firstPlace.geometry.location.lat, firstPlace.geometry.location.lng);
 
                     PlaceDetails placeDetails = ggp_controller.searchPlacesDetail(firstPlace.placeId);
@@ -608,7 +618,7 @@ public class TravelSetUp {
                     String photoUrl = "https://maps.googleapis.com/maps/api/place/photo"
                             + "?maxwidth=400"
                             + "&photo_reference=" + placeDetails.photos[0].photoReference
-                            + "&key=AIzaSyBpYHuPzcz63P3hz-xSUNm75qIYmMur9sc";
+                            + "&key="+ggp_service.printApiKey();
 
 
 

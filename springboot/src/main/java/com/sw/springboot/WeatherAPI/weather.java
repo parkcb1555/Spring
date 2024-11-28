@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,13 +20,14 @@ public class weather {
 
     //단기 예보
     @GetMapping("/VilageWeather")
-    public Map<LocalDate, Double> VilageFcstInfoService(LocalDate StartDate, LocalDate EndDate) throws IOException {
+    public Map<LocalDate, Double> VilageFcstInfoService(String weahterApiKey,LocalDate StartDate, LocalDate EndDate) throws IOException {
         LocalDate now = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         String formattedDate = now.format(formatter);
 
+
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"); /*URL*/
-        urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "=u6UNNYjDKmjjkqebR3K1bkhOm1QUZgZtDJBQEP0fUrFZR0LNCsdqWLtuAl9K%2FZ75kuUHKYTri5BTXwpMpX6iVg%3D%3D"); /*Service Key*/
+        urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "="+weahterApiKey); /*Service Key*/
         urlBuilder.append("&" + URLEncoder.encode("pageNo","UTF-8") + "=" + URLEncoder.encode("1", "UTF-8")); /*페이지번호*/
         urlBuilder.append("&" + URLEncoder.encode("numOfRows","UTF-8") + "=" + URLEncoder.encode("1000", "UTF-8")); /*한 페이지 결과 수*/
         urlBuilder.append("&" + URLEncoder.encode("dataType","UTF-8") + "=" + URLEncoder.encode("JSON", "UTF-8")); /*요청자료형식(XML/JSON) Default: XML*/
@@ -58,7 +60,22 @@ public class weather {
 
         // JSON 데이터 파싱 및 값 추출
         String jsonResponse = sb.toString();
-        Map<LocalDate, Double> SKYValues = extractFcstValueAveragePerDate(jsonResponse,StartDate,EndDate);
+//        Map<LocalDate, Double> SKYValues = extractFcstValueAveragePerDate(jsonResponse,StartDate,EndDate);
+
+
+
+        // JSON 유효성 검사
+        if (jsonResponse == null || jsonResponse.isEmpty() || !jsonResponse.trim().startsWith("{")) {
+            throw new JSONException("Invalid JSON response: " + jsonResponse);
+        }
+
+        // JSON 파싱 및 데이터 처리
+        Map<LocalDate, Double> SKYValues;
+        try {
+            SKYValues = extractFcstValueAveragePerDate(jsonResponse, StartDate,EndDate);
+        } catch (JSONException e) {
+            throw new RuntimeException("Error parsing JSON response: " + e.getMessage(), e);
+        }
 
         return SKYValues;
     }
@@ -125,13 +142,13 @@ public class weather {
 
     @GetMapping("/MidWeather")
     //중기 예보
-    public String MidFcstInfoService(LocalDate StartDate, LocalDate EndDate) throws IOException {
+    public String MidFcstInfoService(String weahterApiKey,LocalDate StartDate, LocalDate EndDate) throws IOException {
         LocalDate now = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         String formattedDate = now.format(formatter);
 
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst"); /*URL*/
-        urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "=u6UNNYjDKmjjkqebR3K1bkhOm1QUZgZtDJBQEP0fUrFZR0LNCsdqWLtuAl9K%2FZ75kuUHKYTri5BTXwpMpX6iVg%3D%3D"); /*Service Key*/
+        urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "="+weahterApiKey); /*Service Key*/
         urlBuilder.append("&" + URLEncoder.encode("pageNo","UTF-8") + "=" + URLEncoder.encode("1", "UTF-8")); /*페이지번호*/
         urlBuilder.append("&" + URLEncoder.encode("numOfRows","UTF-8") + "=" + URLEncoder.encode("10", "UTF-8")); /*한 페이지 결과 수*/
         urlBuilder.append("&" + URLEncoder.encode("dataType","UTF-8") + "=" + URLEncoder.encode("JSON", "UTF-8")); /*요청자료형식(XML/JSON)Default: XML*/

@@ -7,16 +7,29 @@ import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlaceType;
 import com.google.maps.model.PlacesSearchResponse;
 
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Getter
 @Service
 public class GGP_Service {
+
+//    @Value("${google.api.key}")
+    String key;
+
     private final GeoApiContext context;
 
-    public GGP_Service(@Value("${google.api.key}") String apiKey) {
+    public String printApiKey() {
+
+        return key;
+    }
+
+    // 생성자 주입
+    public GGP_Service(@Value("${google.api.key}") String apikey) {
+        this.key = apikey;
         this.context = new GeoApiContext.Builder()
-                .apiKey(apiKey)
+                .apiKey(key)
                 .build();
     }
 
@@ -37,7 +50,6 @@ public class GGP_Service {
     public PlacesSearchResponse searchNearbyPlaces(double lat, double lng, String type) throws Exception {
         // 위치 좌표를 LatLng 객체로 변환
         LatLng location = new LatLng(lat,lng);
-
         // 근처 검색 쿼리
         return PlacesApi.nearbySearchQuery(context, location)
                 .radius(3000) // 1km 반경

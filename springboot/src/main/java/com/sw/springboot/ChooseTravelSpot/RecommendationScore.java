@@ -3,6 +3,7 @@ package com.sw.springboot.ChooseTravelSpot;
 
 import com.sw.springboot.FoursquareAPI.FoursquareService;
 import com.sw.springboot.FoursquareAPI.foursquareRequest;
+import com.sw.springboot.GptAPI.GPT_API_Compent;
 import com.sw.springboot.WeatherAPI.*;
 
 import com.google.gson.JsonObject;
@@ -33,6 +34,9 @@ public class RecommendationScore {
 
     @Autowired
     FoursquareService foursquareService;
+
+    @Autowired
+    GPT_API_Compent gptApiCompent;
 
     //여행지 점수
     @Getter
@@ -139,6 +143,31 @@ public class RecommendationScore {
             }else if (tag.contains("Cafe")) {
                 categoryBuilder.append("13033,13034,13035,13036,13063,13381,");
             }
+
+
+            else if(tag.contains("문화유산")){
+                categoryBuilder.append("12099,12102,12111,16011,16011,16020,16031,");
+            } else if (tag.contains("랜드마크")) {
+                categoryBuilder.append("16024,16025,16026,16046,");
+            }else if (tag.contains("쇼핑")) {
+                categoryBuilder.append("17030,17033,17036,17089,17104,17105,17109,17114,17115,17116,");
+            }else if (tag.contains("전통시장")) {
+                categoryBuilder.append("17002,17054,17144,");
+            }else if (tag.contains("휴양지")) {
+                categoryBuilder.append("19012,19016,19018,");
+            }else if (tag.contains("자연")) {
+                categoryBuilder.append("16002,16003,16005,16009,16023,16028,16030,16042,16043,16053,");
+            }else if (tag.contains("공원")) {
+                categoryBuilder.append("16033,16034,16035,16036,16037,16038,16039,16047,16060,");
+            }else if (tag.contains("카지노")) {
+                categoryBuilder.append("10003,10005,10008,10033,");
+            }else if (tag.contains("스파")) {
+                categoryBuilder.append("16021,18081,");
+            }else if (tag.contains("예술")) {
+                categoryBuilder.append("10004,10016,10028,10030,");
+            }else if (tag.contains("테마파크")) {
+                categoryBuilder.append("10001,10002,10015,10019,10022,10044,10055,10056,");
+            }
         }
         if (categoryBuilder.length() > 0) {
             categoryBuilder.setLength(categoryBuilder.length() - 1);
@@ -167,9 +196,8 @@ public class RecommendationScore {
         LocalDateTime startTime = null;
         LocalDateTime endTime = null;
 
-
         foursquareRequest foursquareRequest = new foursquareRequest();
-        JsonArray TravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),Category);
+        JsonArray TravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Category);
 
 
 
@@ -412,7 +440,7 @@ public class RecommendationScore {
         String Lng = String.valueOf(currentLng);
 
         foursquareRequest foursquareRequest = new foursquareRequest();
-        JsonArray RestaurantSpotArray = foursquareRequest.RestaurantReq(foursquareService.printApiKey(),Lat,Lng);
+        JsonArray RestaurantSpotArray = foursquareRequest.RestaurantReq(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Lat,Lng);
 
         JsonObject place = RestaurantSpotArray.get(0).getAsJsonObject();
         

@@ -6,6 +6,8 @@ import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.DirectionsRoute;
 import com.google.maps.model.LatLng;
 import com.google.maps.model.TravelMode;
+import lombok.Getter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,13 +42,22 @@ import java.util.List;
 //    }
 //}
 
+@Getter
 @Service
 public class DirectionsService {
     private final GeoApiContext context;
 
-    public DirectionsService(@Value("${google.api.key}") String apiKey) {
+    String key;
+
+    public String printApiKey() {
+
+        return key;
+    }
+
+    public DirectionsService(@Value("${google.api.key}") String apikey) {
+        this.key = apikey;
         this.context = new GeoApiContext.Builder()
-                .apiKey(apiKey)
+                .apiKey(key)
                 .build();
     }
 
