@@ -1,11 +1,9 @@
 package com.sw.springboot.GooGlePlaceAPI;
 
 import com.google.maps.GeoApiContext;
+import com.google.maps.GeocodingApi;
 import com.google.maps.PlacesApi;
-import com.google.maps.model.LatLng;
-import com.google.maps.model.PlaceDetails;
-import com.google.maps.model.PlaceType;
-import com.google.maps.model.PlacesSearchResponse;
+import com.google.maps.model.*;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,9 +50,18 @@ public class GGP_Service {
         LatLng location = new LatLng(lat,lng);
         // 근처 검색 쿼리
         return PlacesApi.nearbySearchQuery(context, location)
-                .radius(3000) // 1km 반경
+                .radius(3000) // 3km 반경
                 .type(PlaceType.LODGING) // 장소 유형
                 .language("ko")
                 .await();
+    }
+
+    public LatLng getLatLngFromAddress(String address) throws Exception {
+        GeocodingResult[] results = GeocodingApi.geocode(context, address).await();
+        if (results.length > 0) {
+            return results[0].geometry.location;
+        } else {
+            throw new Exception("주소를 찾을 수 없습니다.");
+        }
     }
 }

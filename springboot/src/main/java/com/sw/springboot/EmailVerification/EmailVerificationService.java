@@ -1,40 +1,61 @@
 package com.sw.springboot.EmailVerification;
 
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.Address;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 @Service
+@RequiredArgsConstructor
 public class EmailVerificationService {
 
-    private final JavaMailSender mailSender;
-    private final RedisTemplate<String, String> redisTemplate;
+    private final JavaMailSender javaMailSender;
+    private static final String senderEmail = "your-email@gmail.com"; // 구글 이메일 설정
 
-    public EmailVerificationService(JavaMailSender mailSender, RedisTemplate<String, String> redisTemplate) {
-        this.mailSender = mailSender;
-        this.redisTemplate = redisTemplate;
+    // 각 사용자의 인증번호를 독립적으로 관리할 수 있는 HashMap
+    private final HashMap<String, String> verificationCodes = new HashMap<>();
+
+    // 랜덤으로 숫자 생성
+    private String createVerificationNumber() {
+        return String.valueOf((int)(Math.random() * (90000)) + 100000); // 6자리 랜덤 숫자
     }
 
-    public void sendVerificationCode(String email) {
-        String code = String.valueOf(new Random().nextInt(900000) + 100000); // 6자리 코드 생성
-        redisTemplate.opsForValue().set(email, code, 10, TimeUnit.MINUTES); // 10분 동안 유효
-        sendEmail(email, code);
+    // 이메일을 위한 MIME 메시지 생성
+    private MimeMessage createMail(String mail, String number) {
+        MimeMessage message = javaMailSender.createMimeMessage();
+
+        try {
+            message.setFrom(senderEmail); // 발신 이메일 설정
+            message.setRecipients(MimeMessage.RecipientType.TO, mail);
+            message.setSubject("이메일 인증");
+            String body = "<h3>요청하신 인증 번호입니다.</h3>" +
+                    "<h1>" + number + "</h1>" +
+                    "<h3>유효 시간은 5분입니다.</h3>";
+            message.setText(body, "UTF-8", "html");
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+
+        return message;
     }
 
-    public boolean verifyCode(String email, String code) {
-        String storedCode = redisTemplate.opsForValue().get(email);
-        return code.equals(storedCode);
+    // 인증 이메일 보내기
+    public String sendMail(String mail) {
+        String number = createVerificationNumber();
+        MimeMessage message = createMail(mail, number);
+        javaMailSender.send(message);
+        verificationCodes.put(mail, number); // 해당 이메일에 인증번호 저장
+        return number;
     }
 
-    private void sendEmail(String to, String code) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject("Your Verification Code");
-        message.setText("Your verification code is: " + code);
-        mailSender.send(message);
+    // 사용자가 입력한 인증번호 검증
+    public boolean verifyNumber(String mail, String userNumber) {
+        String storedNumber = verificationCodes.get(mail);
+        return storedNumber != null && storedNumber.equals(userNumber);
     }
 }

@@ -22,9 +22,11 @@ public class weather {
     @GetMapping("/VilageWeather")
     public Map<LocalDate, Double> VilageFcstInfoService(String weahterApiKey,LocalDate StartDate, LocalDate EndDate) throws IOException {
         LocalDate now = LocalDate.now();
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         String formattedDate = now.format(formatter);
-
+        System.out.println(now);
+        System.out.println(formattedDate);
 
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"); /*URL*/
         urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "="+weahterApiKey); /*Service Key*/

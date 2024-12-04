@@ -53,4 +53,8 @@ public class DirectionsController {
         return directionsService.getDirections(originLat, originLng,destinationLat,destinationLng);
     }
 
+
+    public boolean hasPlaceID(String apikey, String name) throws Exception {
+        return directionsService.isPlaceIdFound(apikey,name);
+    }
 }

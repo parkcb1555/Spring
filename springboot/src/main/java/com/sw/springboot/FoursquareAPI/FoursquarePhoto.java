@@ -37,7 +37,7 @@ public class FoursquarePhoto {
             String suffix = photo.get("suffix").getAsString();
 
             // 전체 이미지 URL 생성
-            String photoUrl = prefix+"400x400"+ suffix;
+            String photoUrl = prefix+"150x150"+ suffix;
 
             // 결과를 StringBuilder에 추가
             photoUrls.append(photoUrl).append("\n");
@@ -51,7 +51,7 @@ public class FoursquarePhoto {
                     .get(0).getAsJsonObject();
 
             // Combine prefix and suffix
-            String iconUrl = icon.get("prefix")+"200"+icon.get("suffix");
+            String iconUrl = icon.get("prefix")+"150"+icon.get("suffix");
             photoUrls.append(iconUrl).append("\n");
         }
 

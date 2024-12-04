@@ -6,6 +6,8 @@ target/
 
 # .env 파일을 Git에 올리지 않도록 설정
 .env
+**/main/resources/application.properties
+
 
 ## test 폴더를 Git에 올리지 않도록 설정
 #src/test/

@@ -253,7 +253,7 @@ public class TravelSetUp {
             MidWeather = weather.MidFcstInfoService(weatherService.getWeatherApiKey(),start,end);
         }
 
-        Map<LocalDateTime, JsonArray> result = recommendationScore.ChooseTravelSpot(tags,startdate,enddate,dateTimeMap);
+        Map<LocalDateTime, JsonArray> result = recommendationScore.ChooseTravelSpot("서울",tags,startdate,enddate,dateTimeMap,directionsService.getKey());
 
         // JsonArray에서 필요한 데이터를 추출
         Map<LocalDateTime, List<Map<String, String>>> processedResult = new LinkedHashMap<>();
@@ -424,7 +424,7 @@ public class TravelSetUp {
                         System.out.println("점심시간!!!!!!!!!!");
                         System.out.println(time.getHour());
 
-                        JsonObject Restaurant = recommendationScore.ChooseRestaurant(currentLat,currentLng);
+                        JsonObject Restaurant = recommendationScore.ChooseRestaurant(currentLat,currentLng,directionsService.getKey());
                         double RestaurantLat = Restaurant.getAsJsonObject("geocodes").getAsJsonObject("main").get("latitude").getAsDouble();
                         double RestaurantLng = Restaurant.getAsJsonObject("geocodes").getAsJsonObject("main").get("longitude").getAsDouble();
 
@@ -495,7 +495,7 @@ public class TravelSetUp {
                         System.out.println("저녁시간!!!!!!!!!!");
                         System.out.println(time.getHour());
 
-                        JsonObject Restaurant = recommendationScore.ChooseRestaurant(currentLat,currentLng);
+                        JsonObject Restaurant = recommendationScore.ChooseRestaurant(currentLat,currentLng,directionsService.getKey());
                         double RestaurantLat = Restaurant.getAsJsonObject("geocodes").getAsJsonObject("main").get("latitude").getAsDouble();
                         double RestaurantLng = Restaurant.getAsJsonObject("geocodes").getAsJsonObject("main").get("longitude").getAsDouble();
 

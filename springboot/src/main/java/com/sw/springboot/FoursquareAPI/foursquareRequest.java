@@ -29,14 +29,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class foursquareRequest {
 
+    @Autowired
+    GPT_API gpt_api;
+
     @GetMapping("/foursquare")
-    public JsonArray req(String FoursquareApiKey,String gptapikey,String tag) throws IOException {
+    public JsonArray req(String FoursquareApiKey,String gptapikey,String tag,String city) throws IOException {
         OkHttpClient client = new OkHttpClient();
 
-        System.out.println(tag);
+        System.out.println(tag+"   "+city);
 
 
-        GPT_API gpt_api = new GPT_API();
 
         double originLat=0.0;
         double originLng=0.0;
@@ -45,7 +47,7 @@ public class foursquareRequest {
 
         // Foursquare Place Search API 요청 (인기도 순 정렬 및 카테고리 ID 포함)
         Request request = new Request.Builder()
-                .url("https://api.foursquare.com/v3/places/search?categories="+tag+"&sort=RATING&limit=5&near=서울&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
+                .url("https://api.foursquare.com/v3/places/search?categories="+tag+"&sort=RATING&limit=20&near="+city+"&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
                 .get()
                 .addHeader("Accept", "application/json")
                 .addHeader("Authorization", FoursquareApiKey)  // 발급받은 API 키 사용
@@ -203,8 +205,7 @@ public class foursquareRequest {
                 priceTier = place.get("price").getAsString();
             }else{
                 priceTier = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"priceTier");
-                System.out.println(priceTier);
-                place.addProperty("price", Integer.parseInt(priceTier));
+                place.addProperty("price", priceTier);
             }
 
             if( place.has("rating")){
@@ -245,7 +246,6 @@ public class foursquareRequest {
                     String categoryId = category.get("id").getAsString();
                     // 카테고리 ID가 어떤 태그에 속하는지 확인
                     String placetag = findCategoryTag(categoryId);
-                    System.out.println(placetag);
                     place.addProperty("tag",placetag);
 
                     categoriesBuilder.append("ID: ").append(categoryId).append(", 이름: ").append(categoryName);
@@ -277,10 +277,10 @@ public class foursquareRequest {
     @GetMapping("/RestaurantReq")
     public JsonArray RestaurantReq(String FoursquareApiKey,String gptapikey,String Lat,String Lng) throws IOException {
         OkHttpClient client = new OkHttpClient();
-        GPT_API gpt_api = new GPT_API();
+
         // Foursquare Place Search API 요청 (인기도 순 정렬 및 카테고리 ID 포함)
         Request request = new Request.Builder()
-                .url("https://api.foursquare.com/v3/places/search?ll="+Lat+","+Lng+"&radius=1000&categories=13065&sort=RATING&limit=5&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
+                .url("https://api.foursquare.com/v3/places/search?ll="+Lat+","+Lng+"&radius=2000&categories=13065&sort=RATING&limit=5&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
                 .get()
                 .addHeader("Accept", "application/json")
                 .addHeader("Authorization", FoursquareApiKey)  // 발급받은 API 키 사용
@@ -413,8 +413,7 @@ public class foursquareRequest {
             if(place.has("price")){
                 priceTier = place.get("price").getAsString();
             }else{
-                priceTier = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"priceTier");
-
+                priceTier = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"RestaurantpriceTier");
                 place.addProperty("price", Integer.parseInt(priceTier));
             }
 

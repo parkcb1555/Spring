@@ -1,6 +1,9 @@
 package com.sw.springboot.GooGlePlaceAPI;
 
-
+import com.google.maps.GeoApiContext;
+import com.google.maps.GeocodingApi;
+import com.google.maps.PlacesApi;
+import com.google.maps.model.*;
 import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlacesSearchResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,5 +48,10 @@ public class GGP_Controller {
             @RequestParam String type) throws Exception {
 
         return googlePlaceService.searchNearbyPlaces(lat, lng, type);
+    }
+
+    public LatLng getCoordinates(String address) throws Exception {
+        // 도로명 주소로 위도, 경도를 구합니다.
+        return googlePlaceService.getLatLngFromAddress(address);
     }
 }

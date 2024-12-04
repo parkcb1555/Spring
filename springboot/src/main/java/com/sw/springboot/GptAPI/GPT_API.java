@@ -15,6 +15,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,68 +26,88 @@ public class GPT_API {
     private static final int MAX_TOKENS = 500; // 최대 토큰 수 설정
     String model = "gpt-4o-mini"; // 모델을 gpt-4o-mini
 
+    @Autowired
+    CacheService cacheService;
 
     //장소 주소,운영시간,가격티어 구하기
     public String Gpt_Request(String apikey,String latitude,String longitude,String name, String types) {
-        System.out.println(apikey);
 
+//        CacheService cacheService = new CacheService();
+
+        // 먼저 캐시에서 데이터 확인
+        Optional<Cache> existingCache = cacheService.getCacheByNameAndTypes(name, types);
         String text = "";
-        try {
-            String prompt = "";
-            if(types.equals("address")){
-                prompt = "위도가 "+latitude+"이고 경도가 "+longitude+"인 "+name+"의 주소를 '???의 주소는 ???입니다.' 라는 형식으로 출력해줘";
-            } else if (types.equals("regularHours")) {
-                prompt = "위도가 "+latitude+"이고 경도가 "+longitude+"인 "+name + "의 모든 요일의 운영 시간을  '\n" +"'{\"regular\":[{\"close\":\"????\",\"day\":1,\"open\":\"????\"},{\"close\":\"????\",\"day\":2,\"open\":\"????\"},{\"close\":\"????\",\"day\":3,\"open\":\"????\"},{\"close\":\"????\",\"day\":4,\"open\":\"????\"},{\"close\":\"????\",\"day\":5,\"open\":\"????\"},{\"close\":\"????\",\"day\":6,\"open\":\"????\"},{\"close\":\"????\",\"day\":7,\"open\":\"????\"}]}'" +
-                        "'의 JSON 형식으로 알려줘.\n" +
-                        "월요일은 1, 화요일은 2, 수요일은 3, 목요일은 4, 금요일은 5, 토요일은 6, 일요일은 7로 표현하고\n" +
-                        "반드시 close이 첫번째, day가 2번째, open가 3번째 순이어야 하고"+
-                        "24시간 개방이면 \"open\": \"0000\", \"close\": \"2400\"으로 표현해.";
-            } else if (types.equals("priceTier")) {
-                prompt = "위도가 "+latitude+"이고 경도가 "+longitude+"인 "+name+" 입장 비용을 0=무료, 1 = 저렴, 2 = 보통, 3 = 비싸, 4 = 매우 비쌈을 기준으로 숫자만 표현해서 알려줘";
-            }
 
 
-
-            String url = "https://api.openai.com/v1/chat/completions";
-            JSONObject requestBody = new JSONObject();
-            requestBody.put("model", model);
-            requestBody.put("max_tokens", MAX_TOKENS);
-            JSONArray messages = new JSONArray();
-            JSONObject message = new JSONObject();
-            message.put("role", "user");
-            message.put("content", prompt);
-            messages.put(message);
-            requestBody.put("messages", messages);
-
-
-            // temperature 설정
-            requestBody.put("temperature", 0.4); // 온도 설정
-
-            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Authorization", "Bearer " + apikey); // apikey 확인
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
-
-            try (OutputStream os = connection.getOutputStream()) {
-                byte[] input = requestBody.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-
-            StringBuilder response = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
+        // 캐시가 존재하면 캐시에서 응답 반환
+        if (existingCache.isPresent()) {
+            System.out.println("Cache hit: " + name + " " + types);
+            text = existingCache.get().getResponse();
+        }
+        else {
+            try {
+                String prompt = "";
+                if (types.equals("address")) {
+                    prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + "의 주소를 '???의 주소는 ???입니다.' 라는 형식으로 출력해줘";
+                } else if (types.equals("regularHours")) {
+                    prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + "의 모든 요일의 운영 시간을  '\n" + "'{\"regular\":[{\"close\":\"????\",\"day\":1,\"open\":\"????\"},{\"close\":\"????\",\"day\":2,\"open\":\"????\"},{\"close\":\"????\",\"day\":3,\"open\":\"????\"},{\"close\":\"????\",\"day\":4,\"open\":\"????\"},{\"close\":\"????\",\"day\":5,\"open\":\"????\"},{\"close\":\"????\",\"day\":6,\"open\":\"????\"},{\"close\":\"????\",\"day\":7,\"open\":\"????\"}]}'" +
+                            "'의 JSON 형식으로 알려줘.\n" +
+                            "월요일은 1, 화요일은 2, 수요일은 3, 목요일은 4, 금요일은 5, 토요일은 6, 일요일은 7로 표현하고\n" +
+                            "반드시 close이 첫번째, day가 2번째, open가 3번째 순이어야 하고" +
+                            "24시간 개방이면 \"open\": \"0000\", \"close\": \"2400\"으로 표현해.";
+                } else if (types.equals("priceTier")) {
+                    prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + " 입장 비용을 0=무료, 1 = 저렴, 2 = 보통, 3 = 비쌈, 4 = 매우 비쌈을 기준으로 숫자만 표현해서 알려줘";
+                } else if (types.equals("RestaurantpriceTier")) {
+                    prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + " 에서 식사 비용을 0=무료, 1 = 저렴, 2 = 보통, 3 = 비쌈, 4 = 매우 비쌈을 기준으로 숫자만 표현해서 알려줘. 만약 알수없는 정보이면 0으로 표현해";
+                    System.out.println(prompt);
                 }
+
+
+                String url = "https://api.openai.com/v1/chat/completions";
+                JSONObject requestBody = new JSONObject();
+                requestBody.put("model", model);
+                requestBody.put("max_tokens", MAX_TOKENS);
+                JSONArray messages = new JSONArray();
+                JSONObject message = new JSONObject();
+                message.put("role", "user");
+                message.put("content", prompt);
+                messages.put(message);
+                requestBody.put("messages", messages);
+
+
+                // temperature 설정
+                requestBody.put("temperature", 0.4); // 온도 설정
+
+                HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Authorization", "Bearer " + apikey); // apikey 확인
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setDoOutput(true);
+
+                try (OutputStream os = connection.getOutputStream()) {
+                    byte[] input = requestBody.toString().getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                StringBuilder response = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
+                    String responseLine;
+                    while ((responseLine = br.readLine()) != null) {
+                        response.append(responseLine.trim());
+                    }
+                }
+
+                text = parseAndPrintResponse(apikey, response.toString(), types);
+
+                if (text.equals("")) {
+                    text = "0";
+                }
+
+                cacheService.saveCache(name,types,text);
+
+            } catch (Exception e) {
+                System.err.println("API 호출 중 오류 발생: " + e.getMessage());
             }
-
-
-            System.out.println(response.toString());
-
-            text = parseAndPrintResponse(apikey,response.toString(),types);
-        } catch (Exception e) {
-            System.err.println("API 호출 중 오류 발생: " + e.getMessage());
         }
         return text;
     }

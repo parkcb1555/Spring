@@ -3,8 +3,10 @@ package com.sw.springboot.ChooseTravelSpot;
 
 import com.sw.springboot.FoursquareAPI.FoursquareService;
 import com.sw.springboot.FoursquareAPI.foursquareRequest;
+import com.sw.springboot.GptAPI.GPT_API;
 import com.sw.springboot.GptAPI.GPT_API_Compent;
 import com.sw.springboot.WeatherAPI.*;
+import com.sw.springboot.GooGlePlaceAPI.DirectionsController;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
@@ -35,8 +37,14 @@ public class RecommendationScore {
     @Autowired
     FoursquareService foursquareService;
 
+
+
     @Autowired
     GPT_API_Compent gptApiCompent;
+
+
+    @Autowired
+    DirectionsController directionsController;
 
     //여행지 점수
     @Getter
@@ -79,6 +87,8 @@ public class RecommendationScore {
 
     }
 
+    @Autowired
+    foursquareRequest foursquareRequest;
 
 
     public void FirstTravelSpot(JsonArray sortedResultsArray){
@@ -180,7 +190,7 @@ public class RecommendationScore {
 
 
     @GetMapping("/ChooseTravelSpot")
-    public Map<LocalDateTime, JsonArray> ChooseTravelSpot(String[] tags, String startdate, String enddate, Map<String, String[]> dateTimeMap) throws IOException {
+    public Map<LocalDateTime, JsonArray> ChooseTravelSpot(String city,String[] tags, String startdate, String enddate, Map<String, String[]> dateTimeMap,String mapapikey) throws IOException {
         System.out.println("ChooseTravelSpot 접속");
         ArrayList<ChooseSpotScore> chooseSpotScoreList = new ArrayList<>();
         ChooseSpotScore chooseSpotScore;
@@ -196,17 +206,28 @@ public class RecommendationScore {
         LocalDateTime startTime = null;
         LocalDateTime endTime = null;
 
-        foursquareRequest foursquareRequest = new foursquareRequest();
-        JsonArray TravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Category);
 
 
+
+        JsonArray TravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Category,city);
 
 
         //여행지 기본 점수 설정
         for (int i = 0; i < TravelSpotArray.size(); i++) {
             int random1to100 = (int) (Math.random() * 100) + 1;
-
+            boolean placecheck;
             JsonObject place = TravelSpotArray.get(i).getAsJsonObject();
+            try {
+                placecheck = directionsController.hasPlaceID(mapapikey,place.get("name").getAsString());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+
+            if (!placecheck) {
+                System.out.println("Skipping place: " + place.get("name").getAsString() + " (Place ID not found)");
+                continue; // 아래 코드는 실행되지 않고, 다음 반복으로 넘어감
+            }
 
             chooseSpotScore = new ChooseSpotScore();
             chooseSpotScore.setSpotName(place.get("name").getAsString());
@@ -266,7 +287,7 @@ public class RecommendationScore {
 
 
             //첫 여행지 선정
-                ArrayList<ChooseSpotScore> hourlyList = new ArrayList<>();
+                 ArrayList<ChooseSpotScore> hourlyList = new ArrayList<>();
 
                 //첫 여행지 점수 설정
                 for (ChooseSpotScore spotScore : chooseSpotScoreList) {
@@ -309,32 +330,6 @@ public class RecommendationScore {
 
                 // Store hourly result in map
                 hourlyScores.put(startTime, selectedFirstSpot);
-
-                // Move to the next hour
-//                startTime = startTime.plusHours(1);
-                HourpenaltyCount+=1;
-//            }
-            
-            //hourlyScores 출력용
-//        for (Map.Entry<LocalDateTime, ChooseSpotScore> entry : hourlyScores.entrySet()) {
-//            LocalDateTime time = entry.getKey();
-//            ChooseSpotScore score = entry.getValue();
-//
-//            // 시간 출력
-//            System.out.println("시간: " + time.format(DateTimeFormatter.ofPattern("HH시")));
-//
-//            // ChooseSpotScore 필드 출력
-//            System.out.println("장소 이름: " + score.getSpotName());
-//            System.out.println("총점: " + score.getTotalScore());
-//            System.out.println("순위: " + score.getRanking());
-//            System.out.println("인기 점수: " + score.getPopularityScore());
-//            System.out.println("시청 점수: " + score.getWatchedScore());
-//            System.out.println("태그 점수: " + score.getTagScore());
-//            System.out.println("근처 명소 점수: " + score.getNearSpotScore());
-//            System.out.println("운영 시간 점수: " + score.getRegularHoursScore());
-//
-//            System.out.println("=======================");
-//        }
 
             Map.Entry<LocalDateTime, ChooseSpotScore> maxEntry = hourlyScores.entrySet()
                     .stream()
@@ -433,16 +428,33 @@ public class RecommendationScore {
         return FinalChooseSpotMap;
     }
 
-    public JsonObject ChooseRestaurant(double currentLat, double currentLng) throws IOException {
+    public JsonObject ChooseRestaurant(double currentLat, double currentLng,String mapapikey) throws IOException {
 //        Map<LocalDateTime, JsonArray> FinalChooseSpotMap = new LinkedHashMap<>();
 
         String Lat = String.valueOf(currentLat);
         String Lng = String.valueOf(currentLng);
 
-        foursquareRequest foursquareRequest = new foursquareRequest();
-        JsonArray RestaurantSpotArray = foursquareRequest.RestaurantReq(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Lat,Lng);
 
-        JsonObject place = RestaurantSpotArray.get(0).getAsJsonObject();
+        JsonArray RestaurantSpotArray = foursquareRequest.RestaurantReq(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Lat,Lng);
+        JsonObject place = null;
+
+
+        for (int i = 0; i < RestaurantSpotArray.size(); i++) {
+            boolean placecheck;
+            place = RestaurantSpotArray.get(i).getAsJsonObject();
+            try {
+                placecheck = directionsController.hasPlaceID(mapapikey, place.get("name").getAsString());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            if (!placecheck) {
+                System.out.println("Skipping place: " + place.get("name").getAsString() + " (Place ID not found)");
+                continue; // 아래 코드는 실행되지 않고, 다음 반복으로 넘어감
+            }
+
+            return place;
+        }
         
         return place;
     }
