@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TravelTagSetView</title>
+</head>
+<body>
+<h1>TravelTagSetView</h1>
+<h1>설정된 날짜와 시간</h1>
+<ul>
+    <form action=""></form>
+    <th:block th:each="entry : ${dateTimeMap}">
+        <li>
+            날짜: <span th:text="${entry.key}"></span><br>
+            시작 시간: <span th:text="${entry.value[0]}"></span><br>
+            종료 시간: <span th:text="${entry.value[1]}"></span>
+        </li>
+    </th:block>
+</ul>
+    <form id="travelForm" method="POST" th:action="@{/ShowPlan}">
+        <!-- person 객체의 데이터 -->
+        <input type="hidden" th:value="${person.city}" name="city"/>
+        <input type="hidden" th:value="${person.startdate}" name="startdate"/>
+        <input type="hidden" th:value="${person.enddate}" name="enddate"/>
+        <input type="hidden" th:value="${person.peoplecount}" name="peoplecount"/>
+        <div id="time-fields-container"></div>
+        <!-- dateTimeMap의 데이터 -->
+        <th:block th:each="entry : ${dateTimeMap}">
+            <input type="hidden" th:name="'date_' + ${entry.key}" th:value="${entry.key}"/>
+            <input type="hidden" th:name="'starttime_' + ${entry.key}" th:value="${entry.value[0]}"/>
+            <input type="hidden" th:name="'endtime_' + ${entry.key}" th:value="${entry.value[1]}"/>
+        </th:block>
+
+<!--        &lt;!&ndash; 여러 개의 버튼, 각 버튼마다 다른 tag 값 넘기기 &ndash;&gt;-->
+        <input type="hidden" value="16020" name="tag"/>
+        <button type="submit" th:value="16020">문화, 역사</button>
+
+
+        <input type="hidden" id="selectedTags" name="tags[]" />
+        <input type="checkbox" id="Historic" /><label for="Historic">문화, 역사</label>
+        <input type="checkbox" id="Landmarks" /><label for="Landmarks">랜드 마크</label>
+        <input type="checkbox" id="Shopping" /><label for="Shopping">쇼핑</label>
+        <input type="checkbox" id="Market" /><label for="Market">전통시장</label>
+        <input type="checkbox" id="Resort" /><label for="Resort">휴양지</label>
+        <input type="checkbox" id="Nature" /><label for="Nature">자연</label>
+        <input type="checkbox" id="Park" /><label for="Park">공원</label>
+        <input type="checkbox" id="Casino" /><label for="Casino">카지노</label>
+        <input type="checkbox" id="Spa" /><label for="Spa">스파</label>
+        <input type="checkbox" id="Art" /><label for="Art">예술</label>
+        <input type="checkbox" id="Entertainment" /><label for="Entertainment">테마파크</label>
+        <input type="checkbox" id="Cafe" /><label for="Cafe">카페</label>
+        <button type="submit">제출</button>
+    </form>
+<!--<form method="POST" action="/TagSetting">-->
+<!--    <input type="hidden" id="tag-1" name="tags[]" value="Historic"/>-->
+<!--    <input type="hidden" id="tag-2" name="tags[]" value="Landmarks"/>-->
+<!--    <input type="hidden" id="tag-3" name="tags[]" value="Shopping"/>-->
+
+<!--    <button type="button" class="tag-btn" data-tag="Historic">문화, 역사</button>-->
+<!--    <button type="button" class="tag-btn" data-tag="Landmarks">랜드 마크</button>-->
+<!--    <button type="button" class="tag-btn" data-tag="Shopping">쇼핑</button>-->
+
+<!--    <button type="submit">제출</button>-->
+<!--</form>-->
+</body>
+<script>
+    document.getElementById("travelForm").addEventListener("submit", function(event) {
+        // 선택된 체크박스들 가져오기
+        let selectedTags = [];
+        let checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+
+        // 체크된 체크박스의 id 값을 배열에 추가
+        checkboxes.forEach(function(checkbox) {
+            selectedTags.push(checkbox.id);
+        });
+
+        // 숨겨진 input 필드에 선택된 id 값 배열을 추가
+        document.getElementById("selectedTags").value = selectedTags.join(',');
+
+        // 폼이 정상적으로 제출되도록 한다.
+    });
+
+</script>
+
+</html>

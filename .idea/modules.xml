@@ -2,8 +2,12 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<<<<<<< HEAD
       <module fileurl="file://$PROJECT_DIR$/.idea/Spring.iml" filepath="$PROJECT_DIR$/.idea/Spring.iml" />
       <module fileurl="file://$PROJECT_DIR$/springboot/springboot.iml" filepath="$PROJECT_DIR$/springboot/springboot.iml" />
+=======
+      <module fileurl="file://$PROJECT_DIR$/.idea/21.iml" filepath="$PROJECT_DIR$/.idea/21.iml" />
+>>>>>>> 0c27d1f22e9e034ac89d2245b58051193bbb08d3
     </modules>
   </component>
 </project>

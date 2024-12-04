@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이메일 인증</title>
+</head>
+<body>
+<h2>이메일 인증</h2>
+<form action="/mailSend" method="POST">
+    <label for="mail">이메일 주소</label>
+    <input type="email" id="mail" name="mail" required>
+    <button type="submit">인증 이메일 전송</button>
+</form>
+<div id="result"></div>
+
+<script>
+    // 이메일 전송 후 응답을 처리하는 스크립트
+    const form = document.querySelector('form');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const mail = document.getElementById('mail').value;
+        const response = await fetch('/mailSend?mail=' + mail, {
+            method: 'POST',
+        });
+        const result = await response.json();
+
+        const resultDiv = document.getElementById('result');
+        if (result.success) {
+            resultDiv.innerHTML = `인증 이메일을 ${mail}로 전송했습니다.`;
+            // 인증번호 입력 폼을 추가
+            resultDiv.innerHTML += `
+                    <label for="userNumber">인증 번호 입력</label>
+                    <input type="text" id="userNumber" name="userNumber" required>
+                    <button onclick="checkNumber()">인증 번호 확인</button>
+                `;
+        } else {
+            resultDiv.innerHTML = `오류 발생: ${result.error}`;
+        }
+    });
+
+    // 인증 번호 확인
+    async function checkNumber() {
+        const userNumber = document.getElementById('userNumber').value;
+        const response = await fetch('/mailCheck?userNumber=' + userNumber);
+        const isMatch = await response.json();
+        if (isMatch) {
+            alert("인증 성공!");
+        } else {
+            alert("인증 실패! 다시 시도해 주세요.");
+        }
+    }
+</script>
+</body>
+</html>

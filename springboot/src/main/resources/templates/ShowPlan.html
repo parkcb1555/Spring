@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="">
+<head>
+    <meta charset="UTF-8">
+    <title>ShowPlan</title>
+</head>
+<body>
+  <h1>ShowPlan</h1>
+
+<!--  <ul th:each="entry : ${Spotresult}">-->
+<!--      <p th:text="${#temporals.format(entry.key, 'yyyy-MM-dd HH:mm')}">DateTime</p>-->
+<!--      <pre th:text="${entry.value}"></pre> &lt;!&ndash; JSON 문자열 그대로 출력 &ndash;&gt;-->
+<!--  </ul>-->
+
+  <div th:each="entry : ${Spotresult}">
+      <h2>시간: <span th:text="${entry.key}"></span></h2>
+      <h2>날씨:  <span th:text="${nowWeather}"></span></h2>
+      <div th:each="spot : ${entry.value}">
+          <ul>
+              <img th:src="${spot.photourl}" alt="Image">
+              <li>여행 시간<span th:text="${spot.StartTime}"></span><span>~</span><span th:text="${spot.EndTime}"></span></li>
+              <li>장소명<h5 th:text="${spot.name}"></h5></li>
+              <li>주소<h5 th:text="${spot.address}"></h5></li>
+              <li>장소설명<h5 th:text="${spot.PlaceDescription}"></h5></li>
+              <li>평점<span th:text="${spot.rating}"></span>
+                  <span>(</span>
+                  <span th:text="${spot.ratingsCount}"></span>
+                  <span>)</span>
+              </li>
+<!--              <li>평점수<h5 th:text="${spot.ratingsCount}"></h5></li>-->
+              <li>리뷰 수<h5 th:text="${spot.total_tips}"></h5></li>
+
+
+
+          </ul>
+          <hr/>
+          <h5>이동시간</h5>
+          <span th:text="${spot.totalDurationInMinutes}"></span>
+
+          <hr/>
+      </div>
+      <img th:src="${hotelphotourl}" alt="Image">
+      <h3>숙소명</h3><span th:text="${hotelname}"></span>
+      <h3>주소</h3><span th:text="${hotelvicinity}"></span>
+      <h3>평점</h3><span th:text="${hotelrating}"></span>
+      <h3>리뷰수</h3><span th:text="${hoteltotal_tips}"></span>
+      <h3>숙소설명</h3> <span th:text="${hotelPlaceDescription}"></span>
+  </div>
+</body>
+
+</html>
