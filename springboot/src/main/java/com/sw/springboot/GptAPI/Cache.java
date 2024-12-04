@@ -27,6 +27,12 @@ public class Cache {
     private String response;  // GPT API 응답 내용
 
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();  // 캐시 생성 시간
+    private LocalDateTime createdAt;
+
+    // 엔티티가 DB에 저장되기 전에 createdAt 값을 설정
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();  // 저장되기 전에 현재 시간으로 설정
+    }
 
 }

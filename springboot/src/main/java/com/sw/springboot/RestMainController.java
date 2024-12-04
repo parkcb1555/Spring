@@ -278,6 +278,9 @@ public class RestMainController {
             //날짜 데이터 삽입
             Plan.put("Date",nowdate);
 
+            //도시 삽입
+            Plan.put("location",city);
+
             if(nowdate.isAfter(LocalDate.parse(startdate).plusDays(2))) {
                 String nowWeather = MidWeatherSet(LocalDate.parse(startdate),nowdate,MidWeather);
                 //날씨 데이터 삽입
