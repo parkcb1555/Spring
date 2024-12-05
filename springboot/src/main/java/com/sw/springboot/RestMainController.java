@@ -436,12 +436,18 @@ public class RestMainController {
                             totalDurationInSeconds += duration.inSeconds;
                         }
 
+
+                        JsonObject SpotTotaltipsstat = spot.getAsJsonObject("stats");
+                        int tip1 = SpotTotaltipsstat.has("total_tips") ? SpotTotaltipsstat.get("total_tips").getAsInt() : 0;
+                        int tip2 = SpotTotaltipsstat.has("total_ratings") ? SpotTotaltipsstat.get("total_ratings").getAsInt() : 0;
+                        int tip3 = SpotTotaltipsstat.has("total_photos") ? SpotTotaltipsstat.get("total_photos").getAsInt() : 0;
+
+
+
                         // 총 이동 시간을 분 단위로 계산 (초를 60으로 나눔)
                         long totalDurationInMinutes = totalDurationInSeconds / 60;
                         String SpotTotaltips =
-                                String.valueOf((spot.getAsJsonObject("stats").get("total_tips").getAsInt()
-                                        +spot.getAsJsonObject("stats").get("total_ratings").getAsInt()
-                                        +spot.getAsJsonObject("stats").get("total_photos").getAsInt()));
+                                String.valueOf((tip1+tip2+tip3));
 
                         SpotList.put("SpotName",spot.get("name").getAsString());
                         SpotList.put("SpotLat",currentLat);
@@ -502,10 +508,15 @@ public class RestMainController {
                             totalDurationInMinutes = totalDurationInSeconds / 60;
                         }
 
-                        SpotTotaltips =
-                                String.valueOf((Restaurant.getAsJsonObject("stats").get("total_tips").getAsInt()
-                                        +Restaurant.getAsJsonObject("stats").get("total_ratings").getAsInt()
-                                        +Restaurant.getAsJsonObject("stats").get("total_photos").getAsInt()));
+
+
+                        SpotTotaltipsstat = Restaurant.getAsJsonObject("stats");
+                        tip1 = SpotTotaltipsstat.has("total_tips") ? SpotTotaltipsstat.get("total_tips").getAsInt() : 0;
+                        tip2 = SpotTotaltipsstat.has("total_ratings") ? SpotTotaltipsstat.get("total_ratings").getAsInt() : 0;
+                        tip3 = SpotTotaltipsstat.has("total_photos") ? SpotTotaltipsstat.get("total_photos").getAsInt() : 0;
+
+
+                        SpotTotaltips = String.valueOf((tip1+tip2+tip3));
 
                         System.out.println(Restaurant.get("name").getAsString());
                         SpotList.put("SpotName",Restaurant.get("name").getAsString());
@@ -553,11 +564,12 @@ public class RestMainController {
 
                         // 총 이동 시간을 분 단위로 계산 (초를 60으로 나눔)
                         long totalDurationInMinutes = totalDurationInSeconds / 60;
-
+                        JsonObject SpotTotaltipsstat = spot.getAsJsonObject("stats");
+                        int tip1 = SpotTotaltipsstat.has("total_tips") ? SpotTotaltipsstat.get("total_tips").getAsInt() : 0;
+                        int tip2 = SpotTotaltipsstat.has("total_ratings") ? SpotTotaltipsstat.get("total_ratings").getAsInt() : 0;
+                        int tip3 = SpotTotaltipsstat.has("total_photos") ? SpotTotaltipsstat.get("total_photos").getAsInt() : 0;
                         String SpotTotaltips =
-                                String.valueOf((spot.getAsJsonObject("stats").get("total_tips").getAsInt()
-                                        +spot.getAsJsonObject("stats").get("total_ratings").getAsInt()
-                                        +spot.getAsJsonObject("stats").get("total_photos").getAsInt()));
+                                String.valueOf((tip1+tip2+tip3));
 
                         SpotList.put("SpotName",spot.get("name").getAsString());
                         SpotList.put("SpotLat",currentLat);
@@ -617,10 +629,12 @@ public class RestMainController {
                             totalDurationInMinutes = totalDurationInSeconds / 60;
                         }
 
+                        SpotTotaltipsstat = Restaurant.getAsJsonObject("stats");
+                         tip1 = SpotTotaltipsstat.has("total_tips") ? SpotTotaltipsstat.get("total_tips").getAsInt() : 0;
+                         tip2 = SpotTotaltipsstat.has("total_ratings") ? SpotTotaltipsstat.get("total_ratings").getAsInt() : 0;
+                         tip3 = SpotTotaltipsstat.has("total_photos") ? SpotTotaltipsstat.get("total_photos").getAsInt() : 0;
                         SpotTotaltips =
-                                String.valueOf((Restaurant.getAsJsonObject("stats").get("total_tips").getAsInt()
-                                        +Restaurant.getAsJsonObject("stats").get("total_ratings").getAsInt()
-                                        +Restaurant.getAsJsonObject("stats").get("total_photos").getAsInt()));
+                                String.valueOf((tip1+tip2+tip3));
 
                         System.out.println(Restaurant.get("name").getAsString());
                         SpotList.put("SpotName",Restaurant.get("name").getAsString());
@@ -671,10 +685,12 @@ public class RestMainController {
                             totalDurationInMinutes = totalDurationInSeconds / 60;
                         }
 
+                        JsonObject SpotTotaltipsstat = spot.getAsJsonObject("stats");
+                        int tip1 = SpotTotaltipsstat.has("total_tips") ? SpotTotaltipsstat.get("total_tips").getAsInt() : 0;
+                        int tip2 = SpotTotaltipsstat.has("total_ratings") ? SpotTotaltipsstat.get("total_ratings").getAsInt() : 0;
+                        int tip3 = SpotTotaltipsstat.has("total_photos") ? SpotTotaltipsstat.get("total_photos").getAsInt() : 0;
                         String SpotTotaltips =
-                                String.valueOf((spot.getAsJsonObject("stats").get("total_tips").getAsInt()
-                                        +spot.getAsJsonObject("stats").get("total_ratings").getAsInt()
-                                        +spot.getAsJsonObject("stats").get("total_photos").getAsInt()));
+                                String.valueOf((tip1+tip2+tip3));
 
                         SpotList.put("SpotName",spot.get("name").getAsString());
                         SpotList.put("SpotLat",currentLat);
@@ -741,10 +757,12 @@ public class RestMainController {
                     // 총 이동 시간을 분 단위로 계산 (초를 60으로 나눔)
                     long totalDurationInMinutes = totalDurationInSeconds / 60;
 
+                    JsonObject SpotTotaltipsstat = spot.getAsJsonObject("stats");
+                    int tip1 = SpotTotaltipsstat.has("total_tips") ? SpotTotaltipsstat.get("total_tips").getAsInt() : 0;
+                    int tip2 = SpotTotaltipsstat.has("total_ratings") ? SpotTotaltipsstat.get("total_ratings").getAsInt() : 0;
+                    int tip3 = SpotTotaltipsstat.has("total_photos") ? SpotTotaltipsstat.get("total_photos").getAsInt() : 0;
                     String SpotTotaltips =
-                            String.valueOf((spot.getAsJsonObject("stats").get("total_tips").getAsInt()
-                                    +spot.getAsJsonObject("stats").get("total_ratings").getAsInt()
-                                    +spot.getAsJsonObject("stats").get("total_photos").getAsInt()));
+                            String.valueOf((tip1+tip2+tip3));
 
                     SpotList.put("SpotName",spot.get("name").getAsString());
                     SpotList.put("SpotLat",currentLat);
