@@ -671,6 +671,7 @@ public class RestMainController {
                             totalDurationInMinutes = totalDurationInSeconds / 60;
                         }
 
+
                         String SpotTotaltips =
                                 String.valueOf((spot.getAsJsonObject("stats").get("total_tips").getAsInt()
                                         +spot.getAsJsonObject("stats").get("total_ratings").getAsInt()
