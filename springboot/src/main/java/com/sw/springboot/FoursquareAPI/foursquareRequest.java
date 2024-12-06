@@ -47,7 +47,7 @@ public class foursquareRequest {
 
         // Foursquare Place Search API 요청 (인기도 순 정렬 및 카테고리 ID 포함)
         Request request = new Request.Builder()
-                .url("https://api.foursquare.com/v3/places/search?categories="+tag+"&sort=RATING&limit=10&near="+city+"&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
+                .url("https://api.foursquare.com/v3/places/search?categories="+tag+"&sort=RATING&limit=50&near="+city+"&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
                 .get()
                 .addHeader("Accept", "application/json")
                 .addHeader("Authorization", FoursquareApiKey)  // 발급받은 API 키 사용
@@ -246,8 +246,10 @@ public class foursquareRequest {
                     String categoryId = category.get("id").getAsString();
                     // 카테고리 ID가 어떤 태그에 속하는지 확인
                     String placetag = findCategoryTag(categoryId);
-                    place.addProperty("tag",placetag);
-
+                    if (!placetag.equals("Unknown")) {
+                        System.out.println(place.get("name").getAsString()+" === "+placetag);
+                        place.addProperty("tag", placetag);
+                    }
                     categoriesBuilder.append("ID: ").append(categoryId).append(", 이름: ").append(categoryName);
                     if (j < categoriesArray.size() - 1) {
                         categoriesBuilder.append("; ");
@@ -257,10 +259,10 @@ public class foursquareRequest {
             }
 
             //평균 관람 시간 구하기
-            int AverageTime = GPT_API.AverageTime(gptapikey,latitude,longitude,name); //평균 관람 시간 구하기
+            int AverageTime = gpt_api.AverageTime(gptapikey,latitude,longitude,name); //평균 관람 시간 구하기
             place.addProperty("RegularTime",AverageTime);
 
-            String PlaceDescription = GPT_API.PlaceChooseReason(gptapikey,latitude,longitude,name);
+            String PlaceDescription = gpt_api.PlaceChooseReason(gptapikey,latitude,longitude,name);
             place.addProperty("PlaceDescription",PlaceDescription);
 
             FoursquarePhoto foursquarePhoto = new FoursquarePhoto();
@@ -471,7 +473,7 @@ public class foursquareRequest {
             int RegularTime = 60;
             place.addProperty("RegularTime",RegularTime);
 
-            String PlaceDescription = GPT_API.PlaceChooseReason(gptapikey,latitude,longitude,name);
+            String PlaceDescription = gpt_api.PlaceChooseReason(gptapikey,latitude,longitude,name);
             place.addProperty("PlaceDescription",PlaceDescription);
 
             FoursquarePhoto foursquarePhoto = new FoursquarePhoto();
