@@ -54,7 +54,7 @@ public class GPT_API {
                             "'의 JSON 형식으로 알려줘.\n" +
                             "월요일은 1, 화요일은 2, 수요일은 3, 목요일은 4, 금요일은 5, 토요일은 6, 일요일은 7로 표현하고\n" +
                             "반드시 close이 첫번째, day가 2번째, open가 3번째 순이어야 하고" +
-                            "24시간 개방이면 \"open\": \"0000\", \"close\": \"2400\"으로 표현해.";
+                            "24시간 개방이면 \"open\": \"0000\", \"close\": \"2400\"으로 표현해. 만약 운영시간에 대해 찾을 수 없으면 9시부터 18시인걸로 해줘";
                 } else if (types.equals("priceTier")) {
                     prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + " 입장 비용을 0=무료, 1 = 저렴, 2 = 보통, 3 = 비쌈, 4 = 매우 비쌈을 기준으로 숫자만 표현해서 알려줘";
                 } else if (types.equals("RestaurantpriceTier")) {
@@ -330,7 +330,7 @@ public class GPT_API {
     }
 
     // 관광지 추천 이유 받아옴
-    public static String PlaceChooseReason(String apikey,String latitude,String longitude,String place){
+    public String PlaceChooseReason(String apikey,String latitude,String longitude,String place){
         ////========================GPT API function 호출=================================================
         String url = "https://api.openai.com/v1/chat/completions";
         String authorizationKey = "Bearer "+apikey; // 여기에 자신의 API 키 입력
@@ -371,72 +371,86 @@ public class GPT_API {
 
         HttpURLConnection con = null;
         String answer ="";
-        try {
-            // URL 객체 생성
-            URL urlObject = new URL(url);
-            con = (HttpURLConnection) urlObject.openConnection();
 
-            // 요청 설정
-            con.setRequestMethod("POST");
-            con.setRequestProperty("Content-Type", "application/json");
-            con.setRequestProperty("Authorization", authorizationKey);
-            con.setDoOutput(true);
+        // 먼저 캐시에서 데이터 확인
+        Optional<Cache> existingCache = cacheService.getCacheByNameAndTypes(place, "ChooseReason");
 
-            // 요청 본문에 JSON 데이터 추가
-            try (OutputStream os = con.getOutputStream()) {
-                byte[] input = jsonInputString.getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
 
-            // 응답 코드 확인
+        // 캐시가 존재하면 캐시에서 응답 반환
+        if (existingCache.isPresent()) {
+            System.out.println("Cache hit: " + place + " " + "ChooseReason");
+            answer = existingCache.get().getResponse();
+        }
+        else {
+
+            try {
+                // URL 객체 생성
+                URL urlObject = new URL(url);
+                con = (HttpURLConnection) urlObject.openConnection();
+
+                // 요청 설정
+                con.setRequestMethod("POST");
+                con.setRequestProperty("Content-Type", "application/json");
+                con.setRequestProperty("Authorization", authorizationKey);
+                con.setDoOutput(true);
+
+                // 요청 본문에 JSON 데이터 추가
+                try (OutputStream os = con.getOutputStream()) {
+                    byte[] input = jsonInputString.getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                // 응답 코드 확인
 //			int responseCode = con.getResponseCode();
 //			System.out.println("Response Code : " + responseCode);
 
-            // 응답 읽기
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(con.getInputStream(), "utf-8"));
-            String inputLine;
-            StringBuffer response = new StringBuffer();
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
+                // 응답 읽기
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(con.getInputStream(), "utf-8"));
+                String inputLine;
+                StringBuffer response = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
 
-            // 응답 JSON 출력 (디버깅)
+                // 응답 JSON 출력 (디버깅)
 //			System.out.println("Response JSON: " + response.toString());
 
-            // 응답 JSON 파싱
-            JSONObject jsonResponse = new JSONObject(response.toString());
+                // 응답 JSON 파싱
+                JSONObject jsonResponse = new JSONObject(response.toString());
 
-            // "choices" 배열에서 첫 번째 선택지의 tool_calls 확인
-            JSONArray choices = jsonResponse.getJSONArray("choices");
-            JSONObject firstChoice = choices.getJSONObject(0);
-            JSONObject message = firstChoice.getJSONObject("message");
+                // "choices" 배열에서 첫 번째 선택지의 tool_calls 확인
+                JSONArray choices = jsonResponse.getJSONArray("choices");
+                JSONObject firstChoice = choices.getJSONObject(0);
+                JSONObject message = firstChoice.getJSONObject("message");
 
-            if (message.has("tool_calls")) {
-                JSONArray toolCalls = message.getJSONArray("tool_calls");
-                JSONObject firstToolCall = toolCalls.getJSONObject(0);
-                JSONObject function = firstToolCall.getJSONObject("function");
+                if (message.has("tool_calls")) {
+                    JSONArray toolCalls = message.getJSONArray("tool_calls");
+                    JSONObject firstToolCall = toolCalls.getJSONObject(0);
+                    JSONObject function = firstToolCall.getJSONObject("function");
 
-                // arguments는 문자열로 저장되어 있으므로 다시 파싱
-                String argumentsString = function.getString("arguments");
-                JSONObject argumentsJson = new JSONObject(argumentsString);
+                    // arguments는 문자열로 저장되어 있으므로 다시 파싱
+                    String argumentsString = function.getString("arguments");
+                    JSONObject argumentsJson = new JSONObject(argumentsString);
 
-                // averageVisitTime 값 추출
-                if (argumentsJson.has("answer")) {
-                    answer = argumentsJson.getString("answer");
+                    //answer 값 추출
+                    if (argumentsJson.has("answer")) {
+                        answer = argumentsJson.getString("answer");
+                        cacheService.saveCache(place,"ChooseReason",answer);
+                    } else {
+                        System.out.println("No value for 'answer'");
+                    }
                 } else {
-                    System.out.println("No value for 'answer'");
+                    System.out.println("No 'tool_calls' found in the response.");
                 }
-            } else {
-                System.out.println("No 'tool_calls' found in the response.");
-            }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (con != null) {
-                con.disconnect();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (con != null) {
+                    con.disconnect();
+                }
             }
         }
 

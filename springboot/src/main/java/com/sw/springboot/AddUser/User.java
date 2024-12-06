@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.*;
+
+import com.sw.springboot.Saveplan.*;
 
 @Entity
 @Table(name = "users")  // 테이블 이름을 명시적으로 지정
@@ -32,4 +35,6 @@ public class User {
     public void prePersist() {
         this.createdAt = LocalDateTime.now();  // 저장되기 전에 현재 시간으로 설정
     }
+
+
 }

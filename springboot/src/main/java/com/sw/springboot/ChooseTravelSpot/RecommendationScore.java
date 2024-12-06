@@ -62,6 +62,10 @@ public class RecommendationScore {
         @Setter
         int TagScore;
 
+        //여행지 태그
+        @Setter
+        String SpotTag;
+
         //근처 관광지 점수
         @Setter
         int NearSpotScore;
@@ -78,6 +82,7 @@ public class RecommendationScore {
         @Setter
         String SpotName;
 
+        //관람시간(분단위)
         @Setter
         int RegularTime;
 
@@ -91,15 +96,147 @@ public class RecommendationScore {
     foursquareRequest foursquareRequest;
 
 
-    public void FirstTravelSpot(JsonArray sortedResultsArray){
-        System.out.println("Received JSON Array: " + sortedResultsArray.toString());
+    //시간 점수 구하기
+    public int RegularHoursScoreSet(JsonArray TravelSpotArray, String SpotName, LocalTime NowTime,int currentDayOfWeek,int RegularTime){
+        int score = 0;
+        int openTotalMinutes = 0;
+        int closeTotalMinutes=0;
+        int openHour = 0;
+        int closeHour = 0;
+        for (int i = 0; i < TravelSpotArray.size(); i++) {
+            JsonObject place = TravelSpotArray.get(i).getAsJsonObject();
 
+            if(place.get("name").getAsString().equals(SpotName)){
+                JsonObject hours = place.getAsJsonObject("hours");
+                JsonArray regularArray = hours.getAsJsonArray("regular");
+                for (int j = 0; j < regularArray.size(); j++) {
+                    JsonObject dayInfo = regularArray.get(j).getAsJsonObject();
+                    int day = dayInfo.get("day").getAsInt();
+
+
+                    if (day == currentDayOfWeek) {
+                        // open과 close를 int로 변환
+                        int openTime = Integer.parseInt(dayInfo.get("open").getAsString());
+                        int closeTime = Integer.parseInt(dayInfo.get("close").getAsString());
+
+                        // 운영 시간 계산 (분 단위로 계산)
+                        openHour = openTime / 100;  // 시
+                        int openMinute = openTime % 100;  // 분
+                        closeHour = closeTime / 100;  // 시
+                        int closeMinute = closeTime % 100;  // 분
+
+                        // 각각 시와 분을 분 단위로 환산하여 계산
+                        openTotalMinutes = openHour * 60 + openMinute;
+                        closeTotalMinutes = closeHour * 60 + closeMinute;
+
+                        break;
+                    }
+                }
+                if (openTotalMinutes == 0 && closeTotalMinutes == 0) {
+                    System.out.println("운영 시간이 설정되지 않았습니다.");
+                    break;
+                }else{
+                    // 운영 시간(분) 구하기
+                    int totalOperatingMinutes = (closeTotalMinutes - openTotalMinutes);
+                    totalOperatingMinutes -= RegularTime;
+                    int Operatinghours = totalOperatingMinutes / 60;
+                    double Operatingminutes = (totalOperatingMinutes % 60) / 60.0; // 분을 소수점 값으로 변환
+
+                    // 시와 분을 합쳐서 점수 계산
+                    double totalTimeInHours = Operatinghours + Operatingminutes;
+
+                    // 운영 시간 여부 확인 및 점수 설정
+                    if (NowTime.getHour() < openHour || NowTime.getHour() > closeHour) {
+                        score = 0;
+                    } else {
+                        //리턴할 시간 점수 =  100 / (총 운영시간)
+                        score = (int) (100 / totalTimeInHours);
+                    }
+                }
+            }else{
+                continue;
+            }
+
+        }
+
+        return score;
     }
 
-    // 관광지 기본 점수 계산
+
+
+    //ScoreListByTime에서 총합 점수가 가장 높은 ArrayList<ChooseSpotScore>를 찾는 함수
+    public Map.Entry<LocalTime, ArrayList<ChooseSpotScore>> findHighestScoreList(
+        Map<LocalTime, ArrayList<ChooseSpotScore>> scoreListByTime) {
+        Map.Entry<LocalTime, ArrayList<ChooseSpotScore>> highestScoreEntry = null;
+        int maxTotalScore = Integer.MIN_VALUE;
+
+        for (Map.Entry<LocalTime, ArrayList<ChooseSpotScore>> entry : scoreListByTime.entrySet()) {
+            int totalScore = calculateTotalScore(entry.getValue());
+            if (totalScore > maxTotalScore) {
+                maxTotalScore = totalScore;
+                highestScoreEntry = entry;
+            }
+        }
+
+        return highestScoreEntry;
+    }
+
+    //ArrayList<ChooseSpotScore>의 총합 점수를 계산하는 함수
+    public int calculateTotalScore(ArrayList<ChooseSpotScore> scores) {
+        int total = 0;
+        for (ChooseSpotScore score : scores) {
+            total += score.getTotalScore();
+        }
+        return total;
+    }
+
+    // 관광지 기본 점수 계산(인기점수+관람점수+근처 여행지 점수)
     public int calculateTotalScore(ChooseSpotScore score) {
         return score.PopularityScore + score.WatchedScore  + score.NearSpotScore;
     }
+
+    //근처 관광지 개수 확인
+    public int NearSpotCounting(JsonArray TravelSpotArray,JsonObject NowPlace){
+        int NearSpotCount = 0;
+        for (int i = 0; i < TravelSpotArray.size(); i++) {
+            JsonObject place = TravelSpotArray.get(i).getAsJsonObject();
+            if (!NowPlace.get("name").getAsString().equals(place.get("name").getAsString())){
+                double latitude1 = NowPlace.getAsJsonObject("geocodes").getAsJsonObject("main").get("latitude").getAsDouble();
+                double longitude1 = NowPlace.getAsJsonObject("geocodes").getAsJsonObject("main").get("longitude").getAsDouble();
+
+                double latitude2 = place.getAsJsonObject("geocodes").getAsJsonObject("main").get("latitude").getAsDouble();
+                double longitude2 = place.getAsJsonObject("geocodes").getAsJsonObject("main").get("longitude").getAsDouble();
+
+                double dist = distance(latitude1,longitude1,latitude2,longitude2);
+                if (dist <= 3000){
+                    NearSpotCount+=1;
+                }
+            }
+        }
+        return NearSpotCount;
+    }
+
+    // 두 좌표 사이의 거리를 구하는 함수
+    public static double distance(double lat1, double lon1, double lat2, double lon2) {
+        double theta = deg2rad(lon1 - lon2);
+        double dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.cos(theta);
+        dist = Math.acos(Math.min(1.0, Math.max(-1.0, dist))); // 값 제한
+        dist = rad2deg(dist) * 60 * 1.1515 * 1609.344; // 미터 단위
+        return dist;
+    }
+
+    // 10진수를 radian(라디안)으로 변환
+    private static double deg2rad(double deg) {
+        return (deg * Math.PI / 180.0);
+    }
+
+    // radian(라디안)을 10진수로 변환
+    private static double rad2deg(double rad) {
+        return (rad * 180.0 / Math.PI);
+    }
+
+
 
     //첫 여행지 점수 계산
     public int calculateFirstTotalScore(ChooseSpotScore score) {
@@ -201,20 +338,16 @@ public class RecommendationScore {
         //최종적으로 return 할 Map
         Map<LocalDateTime, JsonArray> FinalChooseSpotMap = new LinkedHashMap<>();
 
-        LocalDate start = LocalDate.parse(startdate);
-        LocalDate end = LocalDate.parse(enddate);
         LocalDateTime startTime = null;
         LocalDateTime endTime = null;
 
-
-
-
+        //포스퀘어 api 호출
         JsonArray TravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Category,city);
+        System.out.println(TravelSpotArray);
 
-
-        //여행지 기본 점수 설정
+//===================================================================================================================
+        //여행지 기본 점수 설정(인기 점수, 관람 점수,근처 관광지 점수)
         for (int i = 0; i < TravelSpotArray.size(); i++) {
-            int random1to100 = (int) (Math.random() * 100) + 1;
             boolean placecheck;
             JsonObject place = TravelSpotArray.get(i).getAsJsonObject();
             try {
@@ -233,36 +366,42 @@ public class RecommendationScore {
             chooseSpotScore.setSpotName(place.get("name").getAsString());
             chooseSpotScore.setRegularTime(place.get("RegularTime").getAsInt());
 
-            chooseSpotScore.setPopularityScore(random1to100);
+            //인기 점수 설정(등수순)
+            chooseSpotScore.setPopularityScore(100-i);
 
-            random1to100 = (int) (Math.random() * 100) + 1;
-            chooseSpotScore.setTagScore(random1to100);
+            //관람 점수 설정(관광지 평균 관람시간(분단위) * 4)
+            chooseSpotScore.setWatchedScore(chooseSpotScore.getRegularTime() * 4);
 
-            random1to100 = (int) (Math.random() * 100) + 1;
-            chooseSpotScore.setWatchedScore(random1to100);
+            //3km 이내 관광지 갯수
+            int NearSpotCount = NearSpotCounting(TravelSpotArray,place);
+            //근처 관광지 점수 설정
+            chooseSpotScore.setNearSpotScore(NearSpotCount * 20);
 
-            random1to100 = (int) (Math.random() * 100) + 1;
-            chooseSpotScore.setNearSpotScore(random1to100);
+            //태그 설정
+            chooseSpotScore.setSpotTag(place.get("tag").getAsString());
+            System.out.println(place.get("tag").getAsString());
+            //태그 점수 설정(20점)
+            chooseSpotScore.setTagScore(20);
 
-            random1to100 = (int) (Math.random() * 100) + 1;
-            chooseSpotScore.setRegularHoursScore(random1to100);
+//            //시간 점수 설정
+//            random1to100 = (int) (Math.random() * 100) + 1;
+//            chooseSpotScore.setRegularHoursScore(random1to100);
 
+            //총점(여행지 기본점수(인기 점수+근처 관광지 점수+관람점수)) 설정
             chooseSpotScore.setTotalScore(calculateTotalScore(chooseSpotScore));
             chooseSpotScoreList.add(chooseSpotScore);
         }
+//===================================================================================================================
 
         Collections.sort(chooseSpotScoreList, Comparator
-                .comparingInt(this::calculateTotalScore)
+                .comparingInt(ChooseSpotScore::getTotalScore)
                 .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
                 .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
-                .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
-                .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
+//                .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
+//                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
                 .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
                 .reversed());
 
-        for (int i = 0; i < chooseSpotScoreList.size(); i++) {
-            chooseSpotScoreList.get(i).setRanking(i + 1);
-        }
 
 
         // dateTimeMap에 저장된 각 날짜별 시작 시간과 종료 시간을 LocalDate로 변경
@@ -285,51 +424,120 @@ public class RecommendationScore {
             //시간대별 가장 높은 점수를 가진 장소를 저장할 Map
             Map<LocalDateTime, ChooseSpotScore> hourlyScores = new LinkedHashMap<>();
 
+//===================================================================================================================
+            //시간대별 점수 설정
+            //1시간 단위의 점수 저장
+            Map<LocalTime, ArrayList<ChooseSpotScore>> ScoreListByTime = new LinkedHashMap<>();
 
-            //첫 여행지 선정
-                 ArrayList<ChooseSpotScore> hourlyList = new ArrayList<>();
+            // 오늘의 요일 가져오기
+            DayOfWeek dayOfWeek = LocalDate.parse(date).getDayOfWeek();
+            System.out.println("요일 숫자 값: " + dayOfWeek.getValue()); // 월요일(1) ~ 일요일(7)
 
-                //첫 여행지 점수 설정
+            //시작 시간
+            LocalTime start = LocalTime.parse(MapstartTime);
+
+            //종료 시간
+            LocalTime end = LocalTime.parse(MapendTime);
+
+            // 1시간 단위로 점수 설정
+            while (!start.isAfter(end)) {
+                // ChooseSpotScore 리스트 생성
+                ArrayList<ChooseSpotScore> ScoresByTimeList = new ArrayList<>();
+
                 for (ChooseSpotScore spotScore : chooseSpotScoreList) {
                     ChooseSpotScore hourlySpotScore = new ChooseSpotScore();
+                    //여행지 이름
                     hourlySpotScore.setSpotName(spotScore.getSpotName());
+
+                    //여행지 인기 점수
                     hourlySpotScore.setPopularityScore(spotScore.getPopularityScore());
-                    hourlySpotScore.setTagScore(spotScore.getTagScore());
-                    hourlySpotScore.setWatchedScore(spotScore.getWatchedScore());
+
+                    //여행지 근처 관광지 점수
                     hourlySpotScore.setNearSpotScore(spotScore.getNearSpotScore());
-                    hourlySpotScore.setRegularHoursScore(spotScore.getRegularHoursScore());
-                    hourlySpotScore.setTotalScore(spotScore.getTotalScore());
-                    hourlySpotScore.setRanking(spotScore.getRanking());
+
+                    //여행지 관람점수
+                    hourlySpotScore.setWatchedScore(spotScore.getWatchedScore());
+
+                    //여행지 관람시간
                     hourlySpotScore.setRegularTime(spotScore.getRegularTime());
 
-                    // Generate new random score for RegularHoursScore each hour
-                    int randomHourlyScore = (int) (Math.random() * 100) + 1;
-                    hourlySpotScore.setRegularHoursScore(0-(HourpenaltyCount*20));
-                    // Calculate total score including hourly score
-                    int firstTotalScore = calculateTotalScore(hourlySpotScore) + randomHourlyScore;
-                    hourlySpotScore.setTotalScore(firstTotalScore);
-                    hourlyList.add(hourlySpotScore);
+                    //태그 설정
+                    hourlySpotScore.setSpotTag(spotScore.getSpotTag());
+                    //태그 점수 설정
+                    hourlySpotScore.setTagScore(spotScore.getTagScore());
+
+                    //시간 점수 계산
+                    int HourlyScore = RegularHoursScoreSet(TravelSpotArray, spotScore.getSpotName(),start,dayOfWeek.getValue(),hourlySpotScore.getRegularTime());
+
+                    //여행지 시간 점수 설정
+                    hourlySpotScore.setRegularHoursScore(spotScore.getTotalScore());
+
+
+                    //총 점수 설정(인기 점수+근처 관광지 점수+관람점수+시간 점수)
+                    hourlySpotScore.setTotalScore(calculateTotalScore(hourlySpotScore)+HourlyScore);
+
+                    // 리스트에 추가
+                    ScoresByTimeList.add(hourlySpotScore);
                 }
 
-                // Sort and rank the hourly list
-                Collections.sort(hourlyList, Comparator
+                // 시간대별 점수 맵에 추가
+                ScoreListByTime.put(start, ScoresByTimeList);
+
+                // 시간 1시간 증가
+                start = start.plusHours(1);
+            }
+
+            // 총합 점수가 가장 높은 ArrayList<ChooseSpotScore> 찾기
+            Map.Entry<LocalTime, ArrayList<ChooseSpotScore>> highestScoreEntry = findHighestScoreList(ScoreListByTime);
+            startTime = LocalDateTime.of(LocalDate.parse(date), highestScoreEntry.getKey());
+            ArrayList<ChooseSpotScore> hourlyList = highestScoreEntry.getValue();
+
+//            //첫 여행지 선정
+//            ArrayList<ChooseSpotScore> hourlyList = new ArrayList<>();
+//
+//            //첫 여행지 점수 설정
+//            for (ChooseSpotScore spotScore : chooseSpotScoreList) {
+//                ChooseSpotScore hourlySpotScore = new ChooseSpotScore();
+//                hourlySpotScore.setSpotName(spotScore.getSpotName());
+//                hourlySpotScore.setPopularityScore(spotScore.getPopularityScore());
+//                hourlySpotScore.setTagScore(spotScore.getTagScore());
+//                hourlySpotScore.setWatchedScore(spotScore.getWatchedScore());
+//                hourlySpotScore.setNearSpotScore(spotScore.getNearSpotScore());
+//                hourlySpotScore.setRegularHoursScore(spotScore.getRegularHoursScore());
+//                hourlySpotScore.setTotalScore(spotScore.getTotalScore());
+//                hourlySpotScore.setRanking(spotScore.getRanking());
+//                hourlySpotScore.setRegularTime(spotScore.getRegularTime());
+//
+//                // Generate new random score for RegularHoursScore each hour
+//                int randomHourlyScore = (int) (Math.random() * 100) + 1;
+//                hourlySpotScore.setRegularHoursScore(0-(HourpenaltyCount*20));
+//
+//                // Calculate total score including hourly score
+//                int firstTotalScore = calculateTotalScore(hourlySpotScore) + randomHourlyScore;
+//                hourlySpotScore.setTotalScore(firstTotalScore);
+//                hourlyList.add(hourlySpotScore);
+//            }
+
+            //선정된 여행지 리스트 정렬
+            Collections.sort(hourlyList, Comparator
                         .comparingInt(ChooseSpotScore::getTotalScore)
                         .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
                         .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
                         .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
-                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
+//                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
                         .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
                         .reversed());
 
-                for (int i = 0; i < hourlyList.size(); i++) {
-                    hourlyList.get(i).setRanking(i + 1);
-                }
+            for (int i = 0; i < hourlyList.size(); i++) {
+                hourlyList.get(i).setRanking(i + 1);
+            }
 
-                // 가장 높은 점수를 받은 장소 선택
-                ChooseSpotScore selectedFirstSpot = hourlyList.get(0);
+            // 가장 높은 점수를 받은 장소 선택
+            ChooseSpotScore selectedFirstSpot = hourlyList.get(0);
+            System.out.println(selectedFirstSpot.getSpotName()+" >> "+selectedFirstSpot.getSpotTag());
 
-                // Store hourly result in map
-                hourlyScores.put(startTime, selectedFirstSpot);
+            // Store hourly result in map
+            hourlyScores.put(startTime, selectedFirstSpot);
 
             Map.Entry<LocalDateTime, ChooseSpotScore> maxEntry = hourlyScores.entrySet()
                     .stream()
@@ -370,13 +578,31 @@ public class RecommendationScore {
 
             int selectnum=0;
 
+//==================================================================================================================
+            //2번째 여행지 선정할때 첫 여행지의 태그와 일치하면 태그 점수(20점)만큼 총점수 감소
+            for (ChooseSpotScore spotScore : chooseSpotScoreList) {
+                System.out.println(spotScore.getSpotName());
+                if (selectedFirstSpot.getSpotTag().equals(spotScore.getSpotTag())) {
+                    spotScore.setTotalScore(spotScore.getTotalScore()-spotScore.getTagScore());
+                }
+            }
+            //태그 점수(20점)만큼 감소시킨후 정렬
+            Collections.sort(chooseSpotScoreList, Comparator
+                    .comparingInt(ChooseSpotScore::getTotalScore)
+                    .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
+                    .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
+                    .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
+//                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
+                    .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
+                    .reversed());
+
+
             // 가장 높은 총점의 여행지 선택
             ChooseSpotScore selectedSpot; // 리스트 첫 번째 (총점이 가장 높음)
 
             //첫 여행지 선정 이후 다음 여행지 선정
             while (!chooseSpotScoreList.isEmpty() && Datetotaltourtime <= MaxDatetourtime) {
                 if (selectnum >= 0 && selectnum < chooseSpotScoreList.size()) {
-                    
                     selectedSpot = chooseSpotScoreList.get(selectnum);
                     System.out.println("선택된 다음 여행지 '" + selectedSpot.getSpotName());
                     // 선택한 여행지의 소요 시간
@@ -398,6 +624,23 @@ public class RecommendationScore {
                         if(selectnum+1<chooseSpotScoreList.size()) {
                             selectnum += 1;
 
+//==================================================================================================================
+                            //다음 여행지 선정할때 첫 여행지의 태그와 일치하면 태그 점수(20점)만큼 총점수 감소
+                            for (ChooseSpotScore spotScore : chooseSpotScoreList) {
+                                if (selectedSpot.getSpotTag().equals(spotScore.getSpotTag())) {
+                                    spotScore.setTotalScore(spotScore.getTotalScore()-spotScore.getTagScore());
+                                }
+                            }
+                            //태그 점수(20점)만큼 감소시킨후 정렬
+                            Collections.sort(chooseSpotScoreList, Comparator
+                                    .comparingInt(ChooseSpotScore::getTotalScore)
+                                    .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
+                                    .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
+                                    .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
+//                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
+                                    .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
+                                    .reversed());
+                            
                         }else{
                             break;
                         }
