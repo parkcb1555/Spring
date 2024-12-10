@@ -40,6 +40,12 @@ public class GGP_Controller {
         return googlePlaceService.searchPlacesDetail(placeId);
     }
 
+    public String searchPlacesAddress(
+            String name,String placeId) throws Exception {
+
+        return googlePlaceService.getAddressFromPlace(name,placeId);
+    }
+
 
     @GetMapping("/nearby-places")
     public PlacesSearchResponse getNearbyPlaces(

@@ -450,10 +450,10 @@ public class RestMainController {
                     DirectionsResult route = directionsService.getNameDirections(spots.get(i-1).getAsJsonObject().get("name").getAsString(), BestHotel.name);
 
 
-                    PlaceDetails placeDetails = ggp_controller.searchPlacesDetail(BestHotel.placeId);
+                    String HotelAddress = ggp_controller.searchPlacesAddress(BestHotel.name,BestHotel.placeId);
 
                     HotelData = new LinkedHashMap<>();
-                    HotelData.put("Address",placeDetails.formattedAddress);
+                    HotelData.put("Address",HotelAddress);
                     HotelData.put("Lat",BestHotel.geometry.location.lat);
                     HotelData.put("Lng",BestHotel.geometry.location.lng);
 
@@ -892,10 +892,10 @@ public class RestMainController {
 //                    DirectionsResult route = directionsService.getDirections(currentLat, currentLng, BestHotel.geometry.location.lat, BestHotel.geometry.location.lng);
                     DirectionsResult route = directionsService.getNameDirections(spots.get(i).getAsJsonObject().get("name").getAsString(),BestHotel.name);
 
-                    PlaceDetails placeDetails = ggp_controller.searchPlacesDetail(BestHotel.placeId);
+                    String HotelAddress = ggp_controller.searchPlacesAddress(BestHotel.name,BestHotel.placeId);
 
                     HotelData = new LinkedHashMap<>();
-                    HotelData.put("Address",placeDetails.formattedAddress);
+                    HotelData.put("Address",HotelAddress);
                     HotelData.put("Lat",BestHotel.geometry.location.lat);
                     HotelData.put("Lng",BestHotel.geometry.location.lng);
 

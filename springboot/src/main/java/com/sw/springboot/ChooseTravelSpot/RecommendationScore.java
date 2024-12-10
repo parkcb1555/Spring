@@ -447,63 +447,63 @@ public class RecommendationScore {
 
         //=========================================
         //여행지가 50개 미만면 선택했던 카테고리외의 나머지 카테고리 여행지 추가 호출
-        if (TravelSpotArray.size() < 50) {
-            String RestCategory = CategorySetting(tags);
-            JsonArray MoreTravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),RestCategory,city);
-            for (int i = 0; i < MoreTravelSpotArray.size(); i++) {
-                boolean placecheck;
-                JsonObject place = MoreTravelSpotArray.get(i).getAsJsonObject();
-                try {
-                    placecheck = directionsController.hasPlaceID(mapapikey,place.get("name").getAsString());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-
-                if (!placecheck) {
-                    System.out.println("Skipping place: " + place.get("name").getAsString() + " (Place ID not found)");
-                    continue; // 아래 코드는 실행되지 않고, 다음 반복으로 넘어감
-                }
-
-                chooseSpotScore = new ChooseSpotScore();
-                chooseSpotScore.setSpotName(place.get("name").getAsString());
-                chooseSpotScore.setRegularTime(place.get("RegularTime").getAsInt());
-
-                //인기 점수 설정(등수순)
-                chooseSpotScore.setPopularityScore(100-i);
-
-                //관람 점수 설정(관광지 평균 관람시간(분단위) * 4)
-                chooseSpotScore.setWatchedScore(chooseSpotScore.getRegularTime() * 4);
-
-                //3km 이내 관광지 갯수
-                int NearSpotCount = NearSpotCounting(TravelSpotArray,place);
-                //근처 관광지 점수 설정
-                chooseSpotScore.setNearSpotScore(NearSpotCount * 20);
-
-                //태그 설정
-                chooseSpotScore.setSpotTag(place.get("tag").getAsString());
-                System.out.println(place.get("tag").getAsString());
-                //태그 점수 설정(20점)
-                chooseSpotScore.setTagScore(20);
-
-//            //시간 점수 설정
-//            random1to100 = (int) (Math.random() * 100) + 1;
-//            chooseSpotScore.setRegularHoursScore(random1to100);
-
-                //총점(여행지 기본점수(인기 점수+근처 관광지 점수+관람점수)) 설정
-                chooseSpotScore.setTotalScore(calculateTotalScore(chooseSpotScore));
-                chooseSpotScoreList.add(chooseSpotScore);
-            }
-
-            Collections.sort(chooseSpotScoreList, Comparator
-                    .comparingInt(ChooseSpotScore::getTotalScore)
-                    .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
-                    .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
-//                .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
-//                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
-                    .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
-                    .reversed());
-        }
+//        if (TravelSpotArray.size() < 50) {
+//            String RestCategory = CategorySetting(tags);
+//            JsonArray MoreTravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),RestCategory,city);
+//            for (int i = 0; i < MoreTravelSpotArray.size(); i++) {
+//                boolean placecheck;
+//                JsonObject place = MoreTravelSpotArray.get(i).getAsJsonObject();
+//                try {
+//                    placecheck = directionsController.hasPlaceID(mapapikey,place.get("name").getAsString());
+//                } catch (Exception e) {
+//                    throw new RuntimeException(e);
+//                }
+//
+//
+//                if (!placecheck) {
+//                    System.out.println("Skipping place: " + place.get("name").getAsString() + " (Place ID not found)");
+//                    continue; // 아래 코드는 실행되지 않고, 다음 반복으로 넘어감
+//                }
+//
+//                chooseSpotScore = new ChooseSpotScore();
+//                chooseSpotScore.setSpotName(place.get("name").getAsString());
+//                chooseSpotScore.setRegularTime(place.get("RegularTime").getAsInt());
+//
+//                //인기 점수 설정(등수순)
+//                chooseSpotScore.setPopularityScore(100-i);
+//
+//                //관람 점수 설정(관광지 평균 관람시간(분단위) * 4)
+//                chooseSpotScore.setWatchedScore(chooseSpotScore.getRegularTime() * 4);
+//
+//                //3km 이내 관광지 갯수
+//                int NearSpotCount = NearSpotCounting(TravelSpotArray,place);
+//                //근처 관광지 점수 설정
+//                chooseSpotScore.setNearSpotScore(NearSpotCount * 20);
+//
+//                //태그 설정
+//                chooseSpotScore.setSpotTag(place.get("tag").getAsString());
+//                System.out.println(place.get("tag").getAsString());
+//                //태그 점수 설정(20점)
+//                chooseSpotScore.setTagScore(20);
+//
+////            //시간 점수 설정
+////            random1to100 = (int) (Math.random() * 100) + 1;
+////            chooseSpotScore.setRegularHoursScore(random1to100);
+//
+//                //총점(여행지 기본점수(인기 점수+근처 관광지 점수+관람점수)) 설정
+//                chooseSpotScore.setTotalScore(calculateTotalScore(chooseSpotScore));
+//                chooseSpotScoreList.add(chooseSpotScore);
+//            }
+//
+//            Collections.sort(chooseSpotScoreList, Comparator
+//                    .comparingInt(ChooseSpotScore::getTotalScore)
+//                    .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
+//                    .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
+////                .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
+////                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
+//                    .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
+//                    .reversed());
+//        }
 
 
 

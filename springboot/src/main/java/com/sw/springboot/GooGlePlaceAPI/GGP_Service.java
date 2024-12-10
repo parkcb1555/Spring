@@ -14,6 +14,14 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.net.URLEncoder;
+
 @Getter
 @Service
 public class GGP_Service {
@@ -47,6 +55,47 @@ public class GGP_Service {
 
     public PlaceDetails searchPlacesDetail(String placeId) throws Exception {
         return PlacesApi.placeDetails(context,placeId).language("ko").await();
+    }
+
+    public String getAddressFromPlace(String query, String placeId) throws Exception {
+        // 쿼리 파라미터 URL 인코딩
+        String encodedQuery = URLEncoder.encode(query, "UTF-8");
+
+        // API 호출 URL
+        String urlString = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=" + encodedQuery + "&key=" + key;
+        URL url = new URL(urlString);
+
+        // HttpURLConnection 설정
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        // 응답 읽기
+        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        String inputLine;
+        StringBuffer response = new StringBuffer();
+
+        while ((inputLine = in.readLine()) != null) {
+            response.append(inputLine);
+        }
+        in.close();
+
+        // JSON 파싱
+        JSONObject jsonResponse = new JSONObject(response.toString());
+        JSONArray results = jsonResponse.getJSONArray("results");
+
+        // results 배열에서 주어진 placeId와 일치하는 장소 찾기
+        for (int i = 0; i < results.length(); i++) {
+            JSONObject place = results.getJSONObject(i);
+            String resultPlaceId = place.getString("place_id");
+
+            // placeId가 일치하면 해당 장소의 formatted_address 반환
+            if (resultPlaceId.equals(placeId)) {
+                return place.getString("formatted_address");
+            }
+        }
+
+        // 일치하는 장소가 없으면 null 반환
+        return null;
     }
 
 
