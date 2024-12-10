@@ -3,11 +3,16 @@ package com.sw.springboot.GooGlePlaceAPI;
 import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.PlacesApi;
+import com.google.maps.errors.ApiException;
 import com.google.maps.model.*;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 @Service
@@ -56,12 +61,56 @@ public class GGP_Service {
                 .await();
     }
 
-    public LatLng getLatLngFromAddress(String address) throws Exception {
+    public PlacesSearchResponse getHotelByAddress(String address) throws IOException, InterruptedException, ApiException {
         GeocodingResult[] results = GeocodingApi.geocode(context, address).await();
-        if (results.length > 0) {
-            return results[0].geometry.location;
-        } else {
-            throw new Exception("주소를 찾을 수 없습니다.");
+        LatLng location = new LatLng(results[0].geometry.location.lat,results[0].geometry.location.lng);
+        System.out.println(address+"     "+results[0].geometry.location.lat+"      "+results[0].geometry.location.lng);
+        return PlacesApi.nearbySearchQuery(context, location)
+                .radius(100) // 500m 반경
+                .type(PlaceType.LODGING) // 장소 유형
+                .language("ko")
+                .await();
+    }
+
+
+    // 페이지 순회 검색 메서드 추가
+    public PlacesSearchResponse searchNearbyPlacesWithPagination(double lat, double lng, String type, String hotelTag) throws Exception {
+        LatLng location = new LatLng(lat, lng);
+        PlacesSearchResponse response = PlacesApi.nearbySearchQuery(context, location)
+                .radius(3000)
+                .type(PlaceType.valueOf(type.toUpperCase()))
+                .language("ko")
+                .await();
+
+        // 첫 페이지 결과 확인
+        if (findMatchingHotel(response, hotelTag)) {
+            return response;
         }
+
+        // 다음 페이지가 있는 경우 순회
+        while (response.nextPageToken != null) {
+            Thread.sleep(2000);  // Google API 지연 대기
+            response = PlacesApi.nearbySearchNextPage(context, response.nextPageToken)
+                    .language("ko")
+                    .await();
+
+            if (findMatchingHotel(response, hotelTag)) {
+                return response;
+            }
+        }
+
+        // 결과가 없으면 빈 응답 반환
+        return new PlacesSearchResponse();
+    }
+
+    // 호텔 태그 확인 메서드 추가
+    private boolean findMatchingHotel(PlacesSearchResponse response, String hotelTag) {
+        for (PlacesSearchResult result : response.results) {
+            if (hotelTag.equalsIgnoreCase(result.name)) {
+                System.out.println("일치하는 호텔: " + result.name);
+                return true;
+            }
+        }
+        return false;
     }
 }

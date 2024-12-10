@@ -38,7 +38,6 @@ public class RecommendationScore {
     FoursquareService foursquareService;
 
 
-
     @Autowired
     GPT_API_Compent gptApiCompent;
 
@@ -261,6 +260,8 @@ public class RecommendationScore {
         return matchedTravelSpots;
     }
 
+
+    //선택된 카테고리
     public String CategorySetting(String[] tags){
         StringBuilder categoryBuilder = new StringBuilder();
         for (String tag : tags) {
@@ -326,6 +327,49 @@ public class RecommendationScore {
     }
 
 
+    //선택된 카테고리 빼고 남은 카테고리 호출
+    public String RestCategorySetting(String[] tags) {
+        String[] allCategories = {
+                "12099,12102,12111,16011,16011,16020,16031,", // 문화유산
+                "16024,16025,16026,16046,",                  // 랜드마크
+                "17030,17033,17036,17089,17104,17105,17109,17114,17115,17116,", // 쇼핑
+                "17002,17054,17144,",                      // 전통시장
+                "19012,19016,19018,",                      // 휴양지
+                "16002,16003,16005,16009,16023,16028,16030,16042,16043,16053,", // 자연
+                "16033,16034,16035,16036,16037,16038,16039,16047,16060,",       // 공원
+                "10003,10005,10008,10033,",               // 카지노
+                "16021,18081,",                           // 스파
+                "10004,10016,10028,10030,",               // 예술
+                "10001,10002,10015,10019,10022,10044,10055,10056," // 테마파크
+        };
+
+        String[] tagNames = {
+                "문화유산", "랜드마크", "쇼핑", "전통시장", "휴양지",
+                "자연", "공원", "카지노", "스파", "예술", "테마파크"
+        };
+
+        StringBuilder categoryBuilder = new StringBuilder();
+
+        for (int i = 0; i < tagNames.length; i++) {
+            boolean isExcluded = false;
+            for (String tag : tags) {
+                if (tag.contains(tagNames[i])) {
+                    isExcluded = true;
+                    break;
+                }
+            }
+            if (!isExcluded) {
+                categoryBuilder.append(allCategories[i]);
+            }
+        }
+
+        if (categoryBuilder.length() > 0) {
+            categoryBuilder.setLength(categoryBuilder.length() - 1); // 마지막 콤마 제거
+        }
+
+        return categoryBuilder.toString();
+    }
+
     @GetMapping("/ChooseTravelSpot")
     public Map<LocalDateTime, JsonArray> ChooseTravelSpot(String city,String[] tags, String startdate, String enddate, Map<String, String[]> dateTimeMap,String mapapikey) throws IOException {
         System.out.println("ChooseTravelSpot 접속");
@@ -343,7 +387,6 @@ public class RecommendationScore {
 
         //포스퀘어 api 호출
         JsonArray TravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),Category,city);
-        System.out.println(TravelSpotArray);
 
 //===================================================================================================================
         //여행지 기본 점수 설정(인기 점수, 관람 점수,근처 관광지 점수)
@@ -401,6 +444,66 @@ public class RecommendationScore {
 //                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
                 .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
                 .reversed());
+
+        //=========================================
+        //여행지가 50개 미만면 선택했던 카테고리외의 나머지 카테고리 여행지 추가 호출
+        if (TravelSpotArray.size() < 50) {
+            String RestCategory = CategorySetting(tags);
+            JsonArray MoreTravelSpotArray = foursquareRequest.req(foursquareService.printApiKey(),gptApiCompent.printApiKey(),RestCategory,city);
+            for (int i = 0; i < MoreTravelSpotArray.size(); i++) {
+                boolean placecheck;
+                JsonObject place = MoreTravelSpotArray.get(i).getAsJsonObject();
+                try {
+                    placecheck = directionsController.hasPlaceID(mapapikey,place.get("name").getAsString());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+
+                if (!placecheck) {
+                    System.out.println("Skipping place: " + place.get("name").getAsString() + " (Place ID not found)");
+                    continue; // 아래 코드는 실행되지 않고, 다음 반복으로 넘어감
+                }
+
+                chooseSpotScore = new ChooseSpotScore();
+                chooseSpotScore.setSpotName(place.get("name").getAsString());
+                chooseSpotScore.setRegularTime(place.get("RegularTime").getAsInt());
+
+                //인기 점수 설정(등수순)
+                chooseSpotScore.setPopularityScore(100-i);
+
+                //관람 점수 설정(관광지 평균 관람시간(분단위) * 4)
+                chooseSpotScore.setWatchedScore(chooseSpotScore.getRegularTime() * 4);
+
+                //3km 이내 관광지 갯수
+                int NearSpotCount = NearSpotCounting(TravelSpotArray,place);
+                //근처 관광지 점수 설정
+                chooseSpotScore.setNearSpotScore(NearSpotCount * 20);
+
+                //태그 설정
+                chooseSpotScore.setSpotTag(place.get("tag").getAsString());
+                System.out.println(place.get("tag").getAsString());
+                //태그 점수 설정(20점)
+                chooseSpotScore.setTagScore(20);
+
+//            //시간 점수 설정
+//            random1to100 = (int) (Math.random() * 100) + 1;
+//            chooseSpotScore.setRegularHoursScore(random1to100);
+
+                //총점(여행지 기본점수(인기 점수+근처 관광지 점수+관람점수)) 설정
+                chooseSpotScore.setTotalScore(calculateTotalScore(chooseSpotScore));
+                chooseSpotScoreList.add(chooseSpotScore);
+            }
+
+            Collections.sort(chooseSpotScoreList, Comparator
+                    .comparingInt(ChooseSpotScore::getTotalScore)
+                    .thenComparingInt(ChooseSpotScore::getPopularityScore)     // 인기점수
+                    .thenComparingInt(ChooseSpotScore::getNearSpotScore)       // 근처 관광지 점수
+//                .thenComparingInt(ChooseSpotScore::getRegularHoursScore)   // 시간점수
+//                        .thenComparingInt(ChooseSpotScore::getTagScore)            // 태그점수
+                    .thenComparingInt(ChooseSpotScore::getWatchedScore)        // 관람점수
+                    .reversed());
+        }
 
 
 

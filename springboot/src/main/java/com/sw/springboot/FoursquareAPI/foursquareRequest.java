@@ -47,7 +47,7 @@ public class foursquareRequest {
 
         // Foursquare Place Search API 요청 (인기도 순 정렬 및 카테고리 ID 포함)
         Request request = new Request.Builder()
-                .url("https://api.foursquare.com/v3/places/search?categories="+tag+"&sort=RATING&limit=50&near="+city+"&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
+                .url("https://api.foursquare.com/v3/places/search?categories="+tag+"&sort=RATING&limit=5&near="+city+"&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
                 .get()
                 .addHeader("Accept", "application/json")
                 .addHeader("Authorization", FoursquareApiKey)  // 발급받은 API 키 사용
@@ -265,8 +265,11 @@ public class foursquareRequest {
             String PlaceDescription = gpt_api.PlaceChooseReason(gptapikey,latitude,longitude,name);
             place.addProperty("PlaceDescription",PlaceDescription);
 
+            String PlacePrice = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"Spotprice");
+            place.addProperty("Price",PlacePrice);
+
             FoursquarePhoto foursquarePhoto = new FoursquarePhoto();
-            String photourl = foursquarePhoto.foursquarephoto(place,place.get("fsq_id").getAsString(),FoursquareApiKey);
+            String photourl = foursquarePhoto.foursquarephoto(place,place.get("fsq_id").getAsString(),FoursquareApiKey,"spot");
             place.addProperty("photourl",photourl);
 
         }
@@ -282,7 +285,7 @@ public class foursquareRequest {
 
         // Foursquare Place Search API 요청 (인기도 순 정렬 및 카테고리 ID 포함)
         Request request = new Request.Builder()
-                .url("https://api.foursquare.com/v3/places/search?ll="+Lat+","+Lng+"&radius=2000&categories=13065&sort=RATING&limit=5&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
+                .url("https://api.foursquare.com/v3/places/search?ll="+Lat+","+Lng+"&radius=2000&categories=13065&sort=DISTANCE&limit=5&fields=name,fsq_id,location,categories,geocodes,hours,price,popularity,rating,stats,tastes")
                 .get()
                 .addHeader("Accept", "application/json")
                 .addHeader("Authorization", FoursquareApiKey)  // 발급받은 API 키 사용
@@ -476,8 +479,11 @@ public class foursquareRequest {
             String PlaceDescription = gpt_api.PlaceChooseReason(gptapikey,latitude,longitude,name);
             place.addProperty("PlaceDescription",PlaceDescription);
 
+            String PlacePrice = gpt_api.Gpt_Request(gptapikey,latitude,longitude,name,"Restaurantprice");
+            place.addProperty("Price",PlacePrice);
+
             FoursquarePhoto foursquarePhoto = new FoursquarePhoto();
-            String photourl = foursquarePhoto.foursquarephoto(place,place.get("fsq_id").getAsString(),FoursquareApiKey);
+            String photourl = foursquarePhoto.foursquarephoto(place,place.get("fsq_id").getAsString(),FoursquareApiKey,"restaurant");
             place.addProperty("photourl",photourl);
 
         }

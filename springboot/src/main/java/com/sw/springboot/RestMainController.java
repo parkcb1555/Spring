@@ -3,11 +3,14 @@ package com.sw.springboot;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.maps.PlacesApi;
 import com.google.maps.model.*;
 import com.sw.springboot.ChooseTravelSpot.RecommendationScore;
 import com.sw.springboot.GooGlePlaceAPI.DirectionsService;
 import com.sw.springboot.GooGlePlaceAPI.GGP_Controller;
 import com.sw.springboot.GooGlePlaceAPI.GGP_Service;
+import com.sw.springboot.GptAPI.GPT_API;
+import com.sw.springboot.GptAPI.GPT_API_Compent;
 import com.sw.springboot.WeatherAPI.weather;
 import com.sw.springboot.WeatherAPI.WeatherService;
 import jakarta.servlet.http.HttpSession;
@@ -37,7 +40,11 @@ public class RestMainController {
     @Autowired
     WeatherService weatherService;
 
+    @Autowired
+    GPT_API_Compent gptApiCompent;
 
+    @Autowired
+    GPT_API gpt_api;
 
     @PostMapping("/TravelSet1")
     public ResponseEntity<Object> TravelSet1(HttpSession session, @RequestBody Traveler traveler){
@@ -229,6 +236,8 @@ public class RestMainController {
 
         Map<LocalDateTime, JsonArray> result = recommendationScore.ChooseTravelSpot(city,request.getSelectedTags(),startdate,enddate,dateTimeMap,directionsService.getKey());
 
+
+
         // JsonArray에서 필요한 데이터를 추출
         Map<LocalDateTime, List<Map<String, String>>> processedResult = new LinkedHashMap<>();
 
@@ -260,7 +269,94 @@ public class RestMainController {
 
         // 호텔 호출
         GGP_Controller ggp_controller = new GGP_Controller(ggp_service);
-        PlacesSearchResponse PlacesSearchresponse =ggp_controller.getNearbyPlaces(Centerlatitude,Centerlongitude,"LODGING");
+        PlacesSearchResponse PlacesSearchresponse = null;
+        PlacesSearchResult MyHotel = null;
+
+        if (request.getAccommodationAddress() != null && !request.getAccommodationAddress().isEmpty()) {
+            System.out.println("getAccommodationAddress()  Address: " + request.getAccommodationAddress());
+            PlacesSearchresponse = ggp_controller.getHotelByAddress(request.getAccommodationAddress());
+            System.out.println(PlacesSearchresponse.results[0].name);
+        }
+        else if (request.getSelectedHotelTags() != null) {
+            boolean foundHotel = false;
+            PlacesSearchresponse = ggp_controller.getNearbyPlaces(Centerlatitude,Centerlongitude,"LODGING");
+            for (PlacesSearchResult hotel : PlacesSearchresponse.results) {
+                System.out.println("검색된 호텔: " + hotel.name);
+
+                // 호텔 등급 요청
+                String hotelStar = gpt_api.Gpt_Request(
+                        gptApiCompent.getApiKey(),
+                        String.valueOf(hotel.geometry.location.lat),
+                        String.valueOf(hotel.geometry.location.lng),
+                        hotel.name, "HotelStar"
+                );
+
+                // 사용자가 선택한 호텔 태그 확인
+                for (String hotelTag : request.getSelectedHotelTags()) {
+                    if (hotelTag.equals(hotelStar)) {
+                        MyHotel = hotel;
+                        foundHotel = true;
+                        break;
+                    }
+                }
+
+                if (foundHotel) {
+                    break;  // 호텔을 찾으면 루프 종료
+                }
+            }
+
+            // 첫 번째 검색 결과에 호텔이 없을 경우, 다음 페이지 순회
+            while (!foundHotel && PlacesSearchresponse.nextPageToken != null) {
+                Thread.sleep(2000);  // API 대기 시간
+                PlacesSearchresponse = PlacesApi.nearbySearchNextPage(
+                        ggp_service.getContext(),
+                        PlacesSearchresponse.nextPageToken
+                ).language("ko").await();
+
+                for (PlacesSearchResult hotel : PlacesSearchresponse.results) {
+                    System.out.println("다음 페이지 호텔: " + hotel.name);
+
+                    // 호텔 등급 요청
+                    String hotelStar = gpt_api.Gpt_Request(
+                            gptApiCompent.getApiKey(),
+                            String.valueOf(hotel.geometry.location.lat),
+                            String.valueOf(hotel.geometry.location.lng),
+                            hotel.name, "HotelStar"
+                    );
+
+                    for (String hotelTag : request.getSelectedHotelTags()) {
+                        if (hotelTag.equals(hotelStar)) {
+                            MyHotel = hotel;
+                            foundHotel = true;
+                            break;
+                        }
+                    }
+
+                    if (foundHotel) {
+                        break;  // 호텔을 찾으면 루프 종료
+                    }
+                }
+            }
+        }else{
+            PlacesSearchresponse =ggp_controller.getNearbyPlaces(Centerlatitude,Centerlongitude,"LODGING");
+            System.out.println(PlacesSearchresponse.results[0].name);
+        }
+        System.out.println(PlacesSearchresponse.results[0].name);
+
+
+
+//        if (request.getSelectedHotelTags() != null) {
+//            for (PlacesSearchResult Hotel : PlacesSearchresponse.results) {
+//                System.out.println(Hotel.name); // 호텔 이름 출력
+//                String hotelstar = gpt_api.Gpt_Request(gptApiCompent.getApiKey(), String.valueOf(Hotel.geometry.location.lat)
+//                        , String.valueOf(Hotel.geometry.location.lng), Hotel.name, "HotelStar");
+//                for (String hotelTag : request.getSelectedHotelTags()) {
+//                    if (hotelTag.equals(hotelstar)) {
+//                        MyHotel = Hotel;
+//                    }
+//                }
+//            }
+//        }
 
         //여행 플랜 제작
         for (Map.Entry<LocalDateTime, JsonArray> entry : result.entrySet()) {
@@ -268,6 +364,8 @@ public class RestMainController {
             Map<String, Object> Plan = new LinkedHashMap<>();
             //완성된 일자별 여행지 계획 저장
             List<Map<String, Object>> TotalSpotList = new ArrayList<>();
+            int totalPrice = 0;
+
             
             LocalDateTime time = entry.getKey();
             LocalDate nowdate = time.toLocalDate();
@@ -335,7 +433,17 @@ public class RestMainController {
 
 
 
-                    PlacesSearchResult BestHotel = PlacesSearchresponse.results[0];
+                    PlacesSearchResult BestHotel;
+                    if (request.getAccommodationAddress() != null && !request.getAccommodationAddress().isEmpty()) {
+                        BestHotel= PlacesSearchresponse.results[0];
+                    }else if (request.getSelectedHotelTags() != null) {
+                        System.out.println("getSelectedHotelTags()");
+                        BestHotel = MyHotel;
+                    }else{
+                        System.out.println("else");
+                        BestHotel= PlacesSearchresponse.results[0];
+                    }
+                            
 
                     //길찾기-호텔 호출
 //                    DirectionsResult route = directionsService.getDirections(currentLat, currentLng, BestHotel.geometry.location.lat, BestHotel.geometry.location.lng);
@@ -459,6 +567,9 @@ public class RestMainController {
                         SpotList.put("DirectionTime",totalDurationInMinutes);
                         SpotList.put("DirectionURL","https://www.google.com/maps/dir/?api=1&origin="+currentLat+","+currentLng+"&destination="+RestaurantLat+","+RestaurantLng+"&travelmode=transit");
                         SpotList.put("searchPlacesDetail","https://www.google.com/maps/search/"+spot.get("name").getAsString());
+                        SpotList.put("Price",spot.get("Price").getAsInt());
+                        totalPrice+=spot.get("Price").getAsInt();
+
 
                         time = time.plusMinutes(totalDurationInMinutes);
 
@@ -486,7 +597,16 @@ public class RestMainController {
                         // 총 이동 시간을 분 단위로 계산 (초를 60으로 나눔)
                         totalDurationInMinutes = totalDurationInSeconds / 60;
 
-                        PlacesSearchResult BestHotel = PlacesSearchresponse.results[0];
+                        PlacesSearchResult BestHotel;
+                        if (request.getAccommodationAddress() != null && !request.getAccommodationAddress().isEmpty()) {
+                            BestHotel= PlacesSearchresponse.results[0];
+                        }else if (request.getSelectedHotelTags() != null) {
+                            System.out.println("getSelectedHotelTags()");
+                            BestHotel = MyHotel;
+                        }else{
+                            System.out.println("else");
+                            BestHotel= PlacesSearchresponse.results[0];
+                        }
                         RegularTime = Long.parseLong(Restaurant.get("RegularTime").getAsString());
 
                         ////여행지 데이터 저장-여행지 시작 시간
@@ -527,6 +647,8 @@ public class RestMainController {
                         SpotList.put("SpotDescription",Restaurant.get("PlaceDescription").getAsString());
                         SpotList.put("SpotPhoto",Restaurant.get("photourl").getAsString());
                         SpotList.put("DirectionTime",totalDurationInMinutes);
+                        SpotList.put("Price",Restaurant.get("Price").getAsInt());
+                        totalPrice+=Restaurant.get("Price").getAsInt();
                         if(time.plusMinutes(totalDurationInMinutes).getHour() >= Endhour){
                             SpotList.put("DirectionURL","https://www.google.com/maps/dir/?api=1&origin="+RestaurantLat+","+RestaurantLng+"&destination="+BestHotel.geometry.location.lat+","+BestHotel.geometry.location.lng+"&travelmode=transit");
                         }else{
@@ -581,13 +703,15 @@ public class RestMainController {
                         SpotList.put("DirectionTime",totalDurationInMinutes);
                         SpotList.put("DirectionURL","https://www.google.com/maps/dir/?api=1&origin="+currentLat+","+currentLng+"&destination="+RestaurantLat+","+RestaurantLng+"&travelmode=transit");
                         SpotList.put("searchPlacesDetail","https://www.google.com/maps/search/"+spot.get("name").getAsString());
+                        SpotList.put("Price",spot.get("Price").getAsInt());
+                        totalPrice+=spot.get("Price").getAsInt();
 
                         time = time.plusMinutes(totalDurationInMinutes);
 
                         TotalSpotList.add(SpotList);
 
 
-                        //점심식사 장소 -> 다음 여행지
+                        //저녁식사 장소 -> 다음 여행지
                         SpotList = new LinkedHashMap<>();
 
 
@@ -606,7 +730,16 @@ public class RestMainController {
                         }
                         // 총 이동 시간을 분 단위로 계산 (초를 60으로 나눔)
                         totalDurationInMinutes = totalDurationInSeconds / 60;
-                        PlacesSearchResult BestHotel = PlacesSearchresponse.results[0];
+                        PlacesSearchResult BestHotel;
+                        if (request.getAccommodationAddress() != null && !request.getAccommodationAddress().isEmpty()) {
+                            BestHotel= PlacesSearchresponse.results[0];
+                        }else if (request.getSelectedHotelTags() != null) {
+                            System.out.println("getSelectedHotelTags()");
+                            BestHotel = MyHotel;
+                        }else{
+                            System.out.println("else");
+                            BestHotel= PlacesSearchresponse.results[0];
+                        }
 
 
                         RegularTime = Long.parseLong(Restaurant.get("RegularTime").getAsString());
@@ -645,6 +778,8 @@ public class RestMainController {
                         SpotList.put("SpotDescription",Restaurant.get("PlaceDescription").getAsString());
                         SpotList.put("SpotPhoto",Restaurant.get("photourl").getAsString());
                         SpotList.put("DirectionTime",totalDurationInMinutes);
+                        SpotList.put("Price",Restaurant.get("Price").getAsInt());
+                        totalPrice+=Restaurant.get("Price").getAsInt();
                         if(time.plusMinutes(totalDurationInMinutes).getHour() >= Endhour){
                             SpotList.put("DirectionURL","https://www.google.com/maps/dir/?api=1&origin="+RestaurantLat+","+RestaurantLng+"&destination="+BestHotel.geometry.location.lat+","+BestHotel.geometry.location.lng+"&travelmode=transit");
 
@@ -673,7 +808,17 @@ public class RestMainController {
                         // 총 이동 시간을 분 단위로 계산 (초를 60으로 나눔)
                         long totalDurationInMinutes = totalDurationInSeconds / 60;
 
-                        PlacesSearchResult BestHotel = PlacesSearchresponse.results[0];
+                        PlacesSearchResult BestHotel;
+                        if (request.getAccommodationAddress() != null && !request.getAccommodationAddress().isEmpty()) {
+
+                            BestHotel= PlacesSearchresponse.results[0];
+                        }else if (request.getSelectedHotelTags() != null) {
+                            System.out.println("getSelectedHotelTags()");
+                            BestHotel = MyHotel;
+                        }else{
+                            System.out.println("else");
+                            BestHotel= PlacesSearchresponse.results[0];
+                        }
                         if(time.plusMinutes(totalDurationInMinutes).getHour() >= Endhour){
                             route = directionsService.getNameDirections(spots.get(i).getAsJsonObject().get("name").getAsString(),BestHotel.name);
                             // DirectionsResult에서 routes를 가져와 첫 번째 route를 사용
@@ -700,7 +845,8 @@ public class RestMainController {
                         SpotList.put("SpotDescription",spot.get("PlaceDescription").getAsString());
                         SpotList.put("SpotPhoto",spot.get("photourl").getAsString());
                         SpotList.put("DirectionTime",totalDurationInMinutes);
-                        
+                        SpotList.put("Price",spot.get("Price").getAsInt());
+                        totalPrice+=spot.get("Price").getAsInt();
 
                         if(time.plusMinutes(totalDurationInMinutes).getHour() >= Endhour){
                             SpotList.put("DirectionURL","https://www.google.com/maps/dir/?api=1&origin="+currentLat+","+currentLng+"&destination="+BestHotel.geometry.location.lat+","+BestHotel.geometry.location.lng+"&travelmode=transit");
@@ -722,7 +868,17 @@ public class RestMainController {
                     double currentLat = currentSpot.get("latitude").getAsDouble();
                     double currentLng = currentSpot.get("longitude").getAsDouble();
 
-                    PlacesSearchResult BestHotel = PlacesSearchresponse.results[0];
+                    PlacesSearchResult BestHotel;
+                    if (request.getAccommodationAddress() != null && !request.getAccommodationAddress().isEmpty()) {
+                        System.out.println("getAccommodationAddress() ");
+                        BestHotel= PlacesSearchresponse.results[0];
+                    }else if (request.getSelectedHotelTags() != null) {
+                        System.out.println("getSelectedHotelTags()");
+                        BestHotel = MyHotel;
+                    }else{
+                        System.out.println("else");
+                        BestHotel= PlacesSearchresponse.results[0];
+                    }
 
                     ////여행지 데이터 저장-여행지 시작 시간
                     SpotList.put("SpotStartTime",extractTime(time));
@@ -742,7 +898,6 @@ public class RestMainController {
                     HotelData.put("Address",placeDetails.formattedAddress);
                     HotelData.put("Lat",BestHotel.geometry.location.lat);
                     HotelData.put("Lng",BestHotel.geometry.location.lng);
-
 
                     // 총 이동 시간을 담을 변수 (초 단위로 저장)
                     long totalDurationInSeconds = 0;
@@ -774,7 +929,8 @@ public class RestMainController {
                     SpotList.put("DirectionTime",totalDurationInMinutes);
                     SpotList.put("DirectionURL","https://www.google.com/maps/dir/?api=1&origin="+currentLat+","+currentLng+"&destination="+BestHotel.geometry.location.lat+","+BestHotel.geometry.location.lng+"&travelmode=transit");
                     SpotList.put("searchPlacesDetail","https://www.google.com/maps/search/"+spot.get("name").getAsString());
-
+                    SpotList.put("Price",spot.get("Price").getAsInt());
+                    totalPrice+=spot.get("Price").getAsInt();
 //                    time = time.plusMinutes(totalDurationInMinutes);
                 }
 
@@ -783,6 +939,7 @@ public class RestMainController {
                 Plan.put("HotelData",HotelData);
             }
 
+            Plan.put("totalPrice",totalPrice);
             Plan.put("TotalSpotList",TotalSpotList);
             Plan.put("DateEndTime",extractTime(time));
 
@@ -807,7 +964,10 @@ public class RestMainController {
         System.out.println("Time Ranges: " + request.getTimeRanges());
         System.out.println("Selected Tags: " + Arrays.toString(request.getSelectedTags()));
         System.out.println("Transportation: " + request.getTransportation());
-
+        for (String hotelTag : request.getSelectedHotelTags()) {
+            System.out.println(hotelTag);
+        }
+        System.out.println("Address: " + request.getAccommodationAddress());
 
         List<Map<String, Object>> travelPlans = MakePlan(request);
 

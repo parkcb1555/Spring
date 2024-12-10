@@ -50,8 +50,18 @@ public class GGP_Controller {
         return googlePlaceService.searchNearbyPlaces(lat, lng, type);
     }
 
-    public LatLng getCoordinates(String address) throws Exception {
-        // 도로명 주소로 위도, 경도를 구합니다.
-        return googlePlaceService.getLatLngFromAddress(address);
+    @GetMapping("/nearby-hotelplaces")
+    public PlacesSearchResponse getHotelsByAddress(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam String type,
+            @RequestParam String hotelTag) throws Exception {
+        return googlePlaceService.searchNearbyPlacesWithPagination(lat, lng, type, hotelTag);
+    }
+
+    public PlacesSearchResponse getHotelByAddress(
+            @RequestParam String address) throws Exception {
+
+        return googlePlaceService.getHotelByAddress(address);
     }
 }

@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 public class GPT_API {
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
     private static final int BUFFER_SIZE = 4096;
-    private static final int MAX_TOKENS = 500; // 최대 토큰 수 설정
+    private static final int MAX_TOKENS = 800; // 최대 토큰 수 설정
     String model = "gpt-4o-mini"; // 모델을 gpt-4o-mini
 
     @Autowired
@@ -47,9 +47,9 @@ public class GPT_API {
         else {
             try {
                 String prompt = "";
-                if (types.equals("address")) {
+                if (types.equals("address")) { //주소
                     prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + "의 주소를 '???의 주소는 ???입니다.' 라는 형식으로 출력해줘";
-                } else if (types.equals("regularHours")) {
+                } else if (types.equals("regularHours")) { // 운영시간
                     prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + "의 모든 요일의 운영 시간을  '\n" + "'{\"regular\":[{\"close\":\"????\",\"day\":1,\"open\":\"????\"},{\"close\":\"????\",\"day\":2,\"open\":\"????\"},{\"close\":\"????\",\"day\":3,\"open\":\"????\"},{\"close\":\"????\",\"day\":4,\"open\":\"????\"},{\"close\":\"????\",\"day\":5,\"open\":\"????\"},{\"close\":\"????\",\"day\":6,\"open\":\"????\"},{\"close\":\"????\",\"day\":7,\"open\":\"????\"}]}'" +
                             "'의 JSON 형식으로 알려줘.\n" +
                             "월요일은 1, 화요일은 2, 수요일은 3, 목요일은 4, 금요일은 5, 토요일은 6, 일요일은 7로 표현하고\n" +
@@ -60,7 +60,18 @@ public class GPT_API {
                 } else if (types.equals("RestaurantpriceTier")) {
                     prompt = "위도가 " + latitude + "이고 경도가 " + longitude + "인 " + name + " 에서 식사 비용을 0=무료, 1 = 저렴, 2 = 보통, 3 = 비쌈, 4 = 매우 비쌈을 기준으로 숫자만 표현해서 알려줘. 만약 알수없는 정보이면 0으로 표현해";
                     System.out.println(prompt);
+                }else if (types.equals("Restaurantprice")) { //식사 비용
+                    prompt = name + "에서 식사를 하게 되면, 평균적인 1인 식사 금액은 얼마인가요? 금액은 '???' 원 입니다. 라는 형식으로 출력해 주세요. 가능하면 가격을 예상해서 출력해 주세요.";
+                    System.out.println(prompt);
+                }else if (types.equals("Spotprice")) { //여행지 소모 금액
+                    prompt = name + "에서 소모되는 성인 1명의 입장금액은 얼마야? 금액은 '???'원 입니다. 라는 형식으로 출력해줘. 무료이면 0원으로";
+                    System.out.println(prompt);
+                }else if (types.equals("HotelStar")) { //호텔 등급
+                    prompt = name + "의 호텔 등급은?  등급은 '??성' 입니다. 라는 형식으로 출력해";
+                    System.out.println(prompt);
                 }
+
+
 
 
                 String url = "https://api.openai.com/v1/chat/completions";
@@ -125,6 +136,14 @@ public class GPT_API {
                 extracttext= extractregularHours(text);
             } else if (types.equals("priceTier")) {
                 extracttext =extractNumber(text);
+            } else if (types.equals("HotelStar")) {
+                extracttext = extractHotelGrade(text);
+                System.out.println(text);
+                System.out.println(extracttext);
+            } else if (types.equals("Restaurantprice") || types.equals("Spotprice")) {
+                extracttext = extractPrice(text);
+                System.out.println(text);
+                System.out.println(extracttext);
             }
 
 
@@ -183,6 +202,40 @@ public class GPT_API {
             return addressPart;
         }
         return "주소가 없습니다.";
+    }
+    public static String extractHotelGrade(String input) {
+        // 정규 표현식을 이용해 '5성' 부분만 추출
+        Pattern pattern = Pattern.compile("'([^']+)'");
+        Matcher matcher = pattern.matcher(input);
+        String hotelGrade = "";
+
+        if (matcher.find()) {
+            // 추출한 등급 부분
+            hotelGrade = matcher.group(1);
+
+            // 결과 출력
+            System.out.println("호텔 등급: " + hotelGrade);  // 출력: 호텔 등급: 5성
+        }
+        return hotelGrade;
+    }
+
+    public static String extractPrice(String input) {
+        // 주소가 시작되는 부분과 끝나는 부분을 찾아서 추출
+        // 정규 표현식을 이용해 숫자 부분만 추출
+        Pattern pattern = Pattern.compile("'([\\d,]+)'");
+        Matcher matcher = pattern.matcher(input);
+        String costWithoutComma = "";
+        if (matcher.find()) {
+            // 추출한 숫자 부분 (쉼표 포함)
+            String costWithComma = matcher.group(1);
+
+            // 쉼표 제거
+            costWithoutComma = costWithComma.replace(",", "");
+
+            // 결과 출력
+            System.out.println("소모된 비용: " + costWithoutComma); // 출력: 소모된 비용: 20000
+        }
+        return costWithoutComma;
     }
 
     public static String extractNumber(String input) {

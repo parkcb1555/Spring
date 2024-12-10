@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -21,12 +22,20 @@ public class weather {
     //단기 예보
     @GetMapping("/VilageWeather")
     public Map<LocalDate, Double> VilageFcstInfoService(String weahterApiKey,LocalDate StartDate, LocalDate EndDate) throws IOException {
-        LocalDate now = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         String formattedDate = now.format(formatter);
+        String time = "0500";
         System.out.println(now);
         System.out.println(formattedDate);
+
+        // 오전 0시부터 5시 10분 사이면 날짜를 하루 앞당긴다.
+        if (now.getHour() < 5 || (now.getHour() == 5 && now.getMinute() <= 10)) {
+            now = now.minusDays(1);  // 날짜를 전날로 변경
+            formattedDate = now.format(formatter);
+            time = "2300";
+        }
 
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"); /*URL*/
         urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "="+weahterApiKey); /*Service Key*/
@@ -34,7 +43,7 @@ public class weather {
         urlBuilder.append("&" + URLEncoder.encode("numOfRows","UTF-8") + "=" + URLEncoder.encode("1000", "UTF-8")); /*한 페이지 결과 수*/
         urlBuilder.append("&" + URLEncoder.encode("dataType","UTF-8") + "=" + URLEncoder.encode("JSON", "UTF-8")); /*요청자료형식(XML/JSON) Default: XML*/
         urlBuilder.append("&" + URLEncoder.encode("base_date","UTF-8") + "=" + URLEncoder.encode(formattedDate, "UTF-8")); /*‘21년 6월 28일 발표*/
-        urlBuilder.append("&" + URLEncoder.encode("base_time","UTF-8") + "=" + URLEncoder.encode("0500", "UTF-8")); /*05시 발표(정시단위) */
+        urlBuilder.append("&" + URLEncoder.encode("base_time","UTF-8") + "=" + URLEncoder.encode(time, "UTF-8")); /*05시 발표(정시단위) */
         urlBuilder.append("&" + URLEncoder.encode("nx","UTF-8") + "=" + URLEncoder.encode("60", "UTF-8")); /*예보지점의 X 좌표값*/
         urlBuilder.append("&" + URLEncoder.encode("ny","UTF-8") + "=" + URLEncoder.encode("120", "UTF-8")); /*예보지점의 Y 좌표값*/
 
@@ -63,8 +72,6 @@ public class weather {
         // JSON 데이터 파싱 및 값 추출
         String jsonResponse = sb.toString();
 //        Map<LocalDate, Double> SKYValues = extractFcstValueAveragePerDate(jsonResponse,StartDate,EndDate);
-
-        System.out.println(jsonResponse);
 
         // JSON 파싱 및 데이터 처리
         Map<LocalDate, Double> SKYValues;
@@ -140,9 +147,20 @@ public class weather {
     @GetMapping("/MidWeather")
     //중기 예보
     public String MidFcstInfoService(String weahterApiKey,LocalDate StartDate, LocalDate EndDate) throws IOException {
-        LocalDate now = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         String formattedDate = now.format(formatter);
+
+        String time = "0600";
+        System.out.println(now);
+        System.out.println(formattedDate);
+
+        // 오전 0시부터 5시 10분 사이면 날짜를 하루 앞당긴다.
+        if (now.getHour() < 6 ) {
+            now = now.minusDays(1);  // 날짜를 전날로 변경
+            formattedDate = now.format(formatter);
+            time = "1800";
+        }
 
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst"); /*URL*/
         urlBuilder.append("?" + URLEncoder.encode("serviceKey","UTF-8") + "="+weahterApiKey); /*Service Key*/
@@ -150,7 +168,7 @@ public class weather {
         urlBuilder.append("&" + URLEncoder.encode("numOfRows","UTF-8") + "=" + URLEncoder.encode("10", "UTF-8")); /*한 페이지 결과 수*/
         urlBuilder.append("&" + URLEncoder.encode("dataType","UTF-8") + "=" + URLEncoder.encode("JSON", "UTF-8")); /*요청자료형식(XML/JSON)Default: XML*/
         urlBuilder.append("&" + URLEncoder.encode("regId","UTF-8") + "=" + URLEncoder.encode("11B00000", "UTF-8")); /*11B0000 서울, 인천, 경기도 11D10000 등 (활용가이드 하단 참고자료 참조)*/
-        urlBuilder.append("&" + URLEncoder.encode("tmFc","UTF-8") + "=" + URLEncoder.encode(formattedDate+"0600", "UTF-8")); /*-일 2회(06:00,18:00)회 생성 되며 발표시각을 입력 YYYYMMDD0600(1800)-최근 24시간 자료만 제공*/
+        urlBuilder.append("&" + URLEncoder.encode("tmFc","UTF-8") + "=" + URLEncoder.encode(formattedDate+time, "UTF-8")); /*-일 2회(06:00,18:00)회 생성 되며 발표시각을 입력 YYYYMMDD0600(1800)-최근 24시간 자료만 제공*/
 
         URL url = new URL(urlBuilder.toString());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
